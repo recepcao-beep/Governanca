@@ -11,16 +11,64 @@ export default function Dashboard({ user, onLogout }: { user: any; onLogout: () 
   const { users } = useSocket();
   const [activeTab, setActiveTab] = useState('apartamentos');
 
+  const [password, setPassword] = useState('');
+  const [error, setError] = useState('');
+
   // Find latest user state from socket
   const currentUser = users.find(u => u.email === user.email) || user;
+
+  const handlePasswordSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (password === '0000') {
+      try {
+        const res = await fetch('/api/auth/approve-self', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            'Authorization': `Bearer ${localStorage.getItem('token')}`
+          },
+          body: JSON.stringify({ password })
+        });
+        const data = await res.json();
+        if (data.token) {
+          localStorage.setItem('token', data.token);
+          window.location.reload();
+        } else {
+          setError('Erro ao atualizar permissão');
+        }
+      } catch (err) {
+        setError('Erro de conexão');
+      }
+    } else {
+      setError('Senha incorreta');
+    }
+  };
 
   if (!currentUser.approved) {
     return (
       <div className="flex h-screen flex-col items-center justify-center bg-gray-100 p-4 text-center">
-        <div className="rounded-xl bg-white p-8 shadow-lg">
+        <div className="w-full max-w-sm rounded-xl bg-white p-8 shadow-lg">
           <h2 className="mb-4 text-2xl font-bold text-gray-800">Aguardando Aprovação</h2>
           <p className="mb-6 text-gray-600">Seu acesso precisa ser liberado por um gestor.</p>
-          <button onClick={onLogout} className="rounded-lg bg-gray-200 px-6 py-2 font-medium text-gray-700 hover:bg-gray-300">
+          
+          <div className="mb-6 border-t border-gray-200 pt-6">
+            <p className="mb-2 text-sm font-medium text-gray-700">Você é um gestor?</p>
+            <form onSubmit={handlePasswordSubmit} className="flex flex-col gap-2">
+              <input
+                type="password"
+                placeholder="Senha de acesso"
+                value={password}
+                onChange={(e) => setPassword(e.target.value)}
+                className="rounded-lg border border-gray-300 p-3 outline-none focus:border-blue-500 focus:ring-2 focus:ring-blue-500/20"
+              />
+              {error && <p className="text-sm text-red-600">{error}</p>}
+              <button type="submit" className="rounded-lg bg-blue-600 p-3 font-bold text-white hover:bg-blue-700">
+                Liberar Acesso
+              </button>
+            </form>
+          </div>
+
+          <button onClick={onLogout} className="w-full rounded-lg bg-gray-200 px-6 py-3 font-medium text-gray-700 hover:bg-gray-300">
             Sair
           </button>
         </div>

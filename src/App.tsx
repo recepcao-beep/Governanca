@@ -20,7 +20,10 @@ export default function App() {
       })
         .then(res => res.json())
         .then(data => {
-          if (data.user) setUser(data.user);
+          if (data.user) {
+            setUser(data.user);
+            if (data.token) localStorage.setItem('token', data.token);
+          }
           setLoading(false);
         })
         .catch(() => setLoading(false));

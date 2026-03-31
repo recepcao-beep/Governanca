@@ -113,7 +113,13 @@ app.get('/api/auth/google/callback', async (req, res) => {
     }
 
     const user = users[email!];
-    const token = jwt.sign({ email: user.email, role: user.role }, JWT_SECRET);
+    const token = jwt.sign({ 
+      email: user.email, 
+      role: user.role,
+      name: user.name,
+      approved: user.approved,
+      floors: user.floors
+    }, JWT_SECRET);
 
     res.send(`
       <html>
@@ -166,9 +172,64 @@ app.get('/api/auth/me', (req, res) => {
 
   try {
     const decoded: any = jwt.verify(token, JWT_SECRET);
+    let user = users[decoded.email];
+    
+    // Se o servidor reiniciou e perdeu a memória, recria o usuário a partir do token!
+    if (!user) {
+      user = {
+        email: decoded.email,
+        name: decoded.name || decoded.email.split('@')[0],
+        role: decoded.role || 'camareira',
+        approved: decoded.approved || false,
+        floors: decoded.floors || []
+      };
+      users[decoded.email] = user;
+    }
+    
+    // Emite um novo token com os dados mais recentes (caso o gestor tenha aprovado)
+    const newToken = jwt.sign({ 
+      email: user.email, 
+      role: user.role,
+      name: user.name,
+      approved: user.approved,
+      floors: user.floors
+    }, JWT_SECRET);
+
+    res.json({ user, token: newToken });
+  } catch (err) {
+    res.status(401).json({ error: 'Invalid token' });
+  }
+});
+
+app.post('/api/auth/approve-self', (req, res) => {
+  const token = req.headers.authorization?.split(' ')[1];
+  if (!token) return res.status(401).json({ error: 'Unauthorized' });
+
+  try {
+    const decoded: any = jwt.verify(token, JWT_SECRET);
     const user = users[decoded.email];
+    
     if (!user) return res.status(404).json({ error: 'User not found' });
-    res.json({ user });
+    
+    const { password } = req.body;
+    if (password === '0000') {
+      user.approved = true;
+      user.role = 'gestor';
+      user.floors = [200, 300, 400, 500, 600, 700];
+      
+      const newToken = jwt.sign({ 
+        email: user.email, 
+        role: user.role,
+        name: user.name,
+        approved: user.approved,
+        floors: user.floors
+      }, JWT_SECRET);
+      
+      io.emit('user_updated', user);
+      res.json({ token: newToken, user });
+    } else {
+      res.status(401).json({ error: 'Senha incorreta' });
+    }
   } catch (err) {
     res.status(401).json({ error: 'Invalid token' });
   }
@@ -489,22 +550,43 @@ async function syncFromSheets() {
           const exitDate = exitDateMatch ? exitDateMatch[1] : exitDateFull;
           rooms[id].departureDate = exitDate;
           
+          const isEntryToday = todayStrings.some(t => entryDate.includes(t));
           const isExitToday = todayStrings.some(t => exitDate.includes(t));
+          const currentHour = today.getHours();
           
           if (index < 10) {
             debugLogs.push(`Qto ${id} | Saída: "${exitDate}" (Hoje? ${isExitToday}) | Status: "${statusRaw}" | Pax: ${rooms[id].pax}`);
           }
           
-          if (statusRaw.includes('interditado') || statusRaw.includes('bloqueado') || statusRaw.includes('manuten') || statusRaw.includes('inativo')) {
+          const isOccupied = statusRaw.includes('ocupado') || statusRaw.includes('in-house') || statusRaw.includes('trânsito') || statusRaw.includes('transito');
+          const isReservation = statusRaw.includes('reserva') || statusRaw.includes('entrada') || statusRaw.includes('chegada') || statusRaw.includes('checkin');
+          const isCheckout = statusRaw.includes('saída') || statusRaw.includes('saida') || statusRaw.includes('checkout');
+          const isInterditado = statusRaw.includes('interditado') || statusRaw.includes('bloqueado') || statusRaw.includes('manuten') || statusRaw.includes('inativo');
+
+          if (isInterditado) {
             rooms[id].status = 'interditado';
-          } else if (isExitToday && (statusRaw.includes('ocupado') || statusRaw.includes('in-house') || statusRaw.includes('trânsito') || statusRaw.includes('transito') || statusRaw.includes('saída') || statusRaw.includes('saida'))) {
-            rooms[id].status = 'saida';
-          } else if (statusRaw.includes('ocupado') || statusRaw.includes('in-house') || statusRaw.includes('trânsito') || statusRaw.includes('transito')) {
-            rooms[id].status = 'ocupado';
-          } else if (statusRaw.includes('saída') || statusRaw.includes('saida') || statusRaw.includes('checkout')) {
-            rooms[id].status = 'saida';
-          } else if (statusRaw.includes('reserva') || statusRaw.includes('entrada') || statusRaw.includes('chegada') || statusRaw.includes('checkin')) {
-            rooms[id].status = 'chegada';
+          } else if (isOccupied) {
+            if (isExitToday) {
+              // Se está ocupado mas sai hoje, vira saída (ou vago se já passou das 14h)
+              if (currentHour >= 14 && rooms[id].status !== 'chegada') {
+                rooms[id].status = 'vago';
+              } else if (rooms[id].status !== 'chegada') {
+                rooms[id].status = 'saida';
+              }
+            } else {
+              rooms[id].status = 'ocupado';
+            }
+          } else if (isCheckout || (isExitToday && !isEntryToday)) {
+            if (currentHour >= 14 && rooms[id].status !== 'chegada') {
+              rooms[id].status = 'vago';
+            } else if (rooms[id].status !== 'chegada') {
+              rooms[id].status = 'saida';
+            }
+          } else if (isReservation || isEntryToday) {
+            // Só marca como chegada se a data de entrada for HOJE
+            if (isEntryToday) {
+              rooms[id].status = 'chegada';
+            }
           }
         }
       });
