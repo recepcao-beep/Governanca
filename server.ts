@@ -74,10 +74,14 @@ setTimeout(() => {
 const JWT_SECRET = 'hotel-secret-key';
 
 // Auth endpoints
+let appUrl = (process.env.APP_URL || 'http://localhost:3000').replace(/\/$/, '');
+if (!appUrl.startsWith('http')) {
+  appUrl = `https://${appUrl}`;
+}
 const oauth2Client = new google.auth.OAuth2(
   process.env.OAUTH_CLIENT_ID || 'dummy_id',
   process.env.OAUTH_CLIENT_SECRET || 'dummy_secret',
-  `${process.env.APP_URL}/api/auth/google/callback`
+  `${appUrl}/api/auth/google/callback`
 );
 
 app.get('/api/auth/google/url', (req, res) => {
@@ -126,9 +130,18 @@ app.get('/api/auth/google/callback', async (req, res) => {
         </body>
       </html>
     `);
-  } catch (error) {
+  } catch (error: any) {
     console.error('OAuth Error:', error);
-    res.status(500).send('Authentication failed');
+    res.status(500).send(`
+      <html>
+        <body style="font-family: sans-serif; padding: 2rem;">
+          <h2 style="color: red;">Authentication failed</h2>
+          <p><strong>Error details:</strong> ${error.message || String(error)}</p>
+          <p>Verifique se as variáveis de ambiente OAUTH_CLIENT_ID e OAUTH_CLIENT_SECRET estão configuradas corretamente no Render.</p>
+          <button onclick="window.close()">Fechar janela</button>
+        </body>
+      </html>
+    `);
   }
 });
 
