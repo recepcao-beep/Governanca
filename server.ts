@@ -18,7 +18,9 @@ app.use(express.json({ limit: '50mb' }));
 
 // In-memory database
 const users: Record<string, any> = {};
-const rooms: Record<string, any> = {};
+let rooms: Record<string, any> = {};
+let dailyRooms: Record<string, any>[] = [];
+let sheetRoomOrder: string[][] = [];
 const orders: any[] = [];
 const maintenanceRequests: any[] = [];
 const swapRequests: any[] = [];
@@ -28,6 +30,31 @@ let sheetsConfig: any = {
   privateKey: process.env.SHEETS_PRIVATE_KEY || '-----BEGIN PRIVATE KEY-----\nMIIEvwIBADANBgkqhkiG9w0BAQEFAASCBKkwggSlAgEAAoIBAQCnXBJLFHqwYj9G\n+3vIbt/ZiMSrfD438w6osD4mL5Vh/e6HVN7tK9v3lkXaRT2Rb0UW9keld6sQ1eJ0\nUKQGa7P27wdZ7enJW6SmdgJkCi1OoVq51x4zPzxfibYC/aQLnWpct8AydxcXClki\n7PDBN7oNz+6/BkKEJZQ/Svl9Q+di4W/OW0wuFcpsMu6ZZHE+rvd7lws/I53EULuK\n1kq0CQzAx74Z33k2bLWFXY5O+XJPE5HOpxqhjeqEmJjE+S3529WGa2YNL9LsTXUP\nrWYQm5J9L4hYN4UCoq9rkE6yGaRmrddzWAEo2QNXX/gCbjPEULPTY8WNyoVVP7SS\nYi3H+vWNAgMBAAECggEAH6/qlMWZXzkS4wUtkCsR/hWLqy5Yd25xOZY5BjDfN1EF\nbyEuHji+KrgMnMGcYSNwsOLLePRZ8tOUT1KPY9nTlq72NNw7dhEAcTYJyNg2cNtT\nGrm0sZ5I94vS5ukQPNS+tTRjUwrCV+3xJ5A2G1dKRmA2w3tTb8LPuVYgO8v2DP30\nrhczDRPxw1Jq5VKsc9+S3IvHRhFy8mplcB++GcmlddiLIwd9OyqbiGtSkKlkVIFN\nX9NuAW7lo3bF1AZ1GuR6bJe/YKjuuN6HVfTQg0/nlbhfeG8aNF72SZ6eh/9PAu8f\ncLEhqFMXNyeOKexU9onJdQLrY9mtD5NK1ZI7JaNmQQKBgQDUIuaJRFdBTbZmfBGV\nr4iGrWx0JrcSY4KwI3uOVOOa48jgaHKJPkdIrht8l8KzKjs5/hAjUNDxnHWR4wnO\nD7cM0Dcglf5/IktMFeh50fIbzBGkt+T2Pc+Np4rUNdL4Nm5aaxSCmw+Rxz2NnutN\n0uyOyhAfsuStrIzXIYyp4eWprQKBgQDJ9v0eglIx8pHRg8afeGoLLKny/9uxmZMI\nVExHdyKSa07qKbuT0/Z0XD0BLiRqico5PKtaXiPY7nuRtn2U40rfZ4Y1Qwf0SCl1\nOmx6cQN/4WJG7WYCh7EL0qvdUOHMDE5Vw9Q+o84tdx0d/hQ5t8YfGU7aatbN4o+4\n0C3Pvbe3YQKBgQCRIEs9Dz7uUx7839Yb5FlvYYd3suC9uMw4eh3WEqcfWMQdGfd5\ngty7kTkGtMAjWDnqg7BAqNI46MPaCUu06DVfk7aTGWphSXHf3IENjh6m+6X6XUBL\nYZ/zlfI5GZV576rxOp5ud2xgW8D1eQobVLg3O29qcDVXx1sW9kHIGt3GhQKBgQCH\n+TTjRIRIQnLwJxMjrHNgwJpPEvl7cdTvB6ovd0McZwjDWIOEfHFyV+Nulv1HiStQ\nK8uF1Nm3pKAnM0ELa5euH0nZNB731VmsJkCAkvPzNe/vpsdGLssBFb5GC71pnmNj\nFKwh3DDkpUxCNByz20mVCHnxTXr/NGjk2avuMGGvIQKBgQCvBJMR1X0l9qAoIHOi\nRomzqn7lEttohqkV9eScblD3I6V+Ul7qEkvs+5iPtgRmHMenXjWIMYBjBjGEoHUn\nKlygkyOl6gny/pQ4Y93M4HXnhpmqJEYTz870++xTus/0fExSMk5fYOjA+9WhmOff\nkXF6LZc8oLEyYg9DT7uVk0eJXw==\n-----END PRIVATE KEY-----\n'
 };
 let lastSyncStatus: { status: string; message: string; time: string; debug?: string } = { status: 'pending', message: 'Aguardando primeira sincronização...', time: '' };
+
+function createInitialRooms() {
+  const r: Record<string, any> = {};
+  [200, 300, 400, 500, 600, 700].forEach(floor => {
+    for (let i = 0; i <= 34; i++) {
+      const id = `${floor + i}`;
+      if (!deletedRooms.includes(id)) {
+        r[id] = {
+          id,
+          floor,
+          status: 'vago',
+          condition: 'limpo',
+          pax: 0,
+          arrivalDate: '',
+          departureDate: '',
+          dnd: false,
+          arrumacao: false,
+          trocaEnxoval: false,
+          linenDelivered: false
+        };
+      }
+    }
+  });
+  return r;
+}
 
 let packSizes = {
   lencolCasal: 25,
@@ -66,25 +93,9 @@ try {
 }
 
 // Initialize rooms
-[200, 300, 400, 500, 600, 700].forEach(floor => {
-  for (let i = 0; i <= 34; i++) {
-    const id = `${floor + i}`;
-    if (!deletedRooms.includes(id)) {
-      rooms[id] = {
-        id,
-        floor,
-        status: 'vago', // vago, ocupado, interditado, chegada, saida
-        condition: 'limpo', // sujo, limpo, vestir
-        pax: 0,
-        arrivalDate: '',
-        departureDate: '',
-        dnd: false,
-        arrumacao: false,
-        trocaEnxoval: false
-      };
-    }
-  }
-});
+rooms = createInitialRooms();
+dailyRooms = [rooms];
+sheetRoomOrder = [[]];
 
 const JWT_SECRET = 'hotel-secret-key';
 
@@ -257,6 +268,7 @@ io.on('connection', (socket) => {
   socket.on('get_initial_data', () => {
     socket.emit('initial_data', {
       rooms: Object.values(rooms),
+      dailyRooms,
       orders,
       users: Object.values(users),
       packSizes,
@@ -268,11 +280,12 @@ io.on('connection', (socket) => {
   });
 
   socket.on('update_room', async (data) => {
-    const { id, updates } = data;
-    if (rooms[id]) {
-      rooms[id] = { ...rooms[id], ...updates };
-      io.emit('room_updated', rooms[id]);
-      await syncToSheets();
+    const { id, updates, dayIndex = 0 } = data;
+    if (dailyRooms[dayIndex] && dailyRooms[dayIndex][id]) {
+      dailyRooms[dayIndex][id] = { ...dailyRooms[dayIndex][id], ...updates };
+      if (dayIndex === 0) rooms = dailyRooms[0];
+      io.emit('room_updated', { updatedRoom: dailyRooms[dayIndex][id], dayIndex });
+      debouncedSyncToSheets();
     }
   });
 
@@ -407,6 +420,10 @@ io.on('connection', (socket) => {
     io.emit('sheets_config_updated', { configured: true });
     syncFromSheets();
   });
+
+  socket.on('trigger_sync', () => {
+    syncFromSheets();
+  });
 });
 
 // Google Sheets Sync Logic
@@ -434,26 +451,45 @@ async function getSheetsClient() {
   return google.sheets({ version: 'v4', auth });
 }
 
+let syncTimeout: NodeJS.Timeout | null = null;
+
+async function debouncedSyncToSheets() {
+  if (syncTimeout) clearTimeout(syncTimeout);
+  syncTimeout = setTimeout(async () => {
+    await syncToSheets();
+    syncTimeout = null;
+  }, 5000);
+}
+
 async function syncToSheets() {
   const sheets = await getSheetsClient();
-  if (!sheets) return;
+  if (!sheets || !sheetRoomOrder.length) return;
 
   try {
-    const values = Object.values(rooms).map((r: any) => [
-      r.id, r.status, r.condition, r.pax, r.departureDate, r.dnd ? 'Sim' : 'Não'
-    ]);
+    // Update Column C for each day
+    for (let dayIndex = 0; dayIndex < dailyRooms.length; dayIndex++) {
+      const order = sheetRoomOrder[dayIndex];
+      const dayRooms = dailyRooms[dayIndex];
+      
+      if (!order || order.length === 0) continue;
 
-    await sheets.spreadsheets.values.clear({
-      spreadsheetId: sheetsConfig.spreadsheetId,
-      range: 'STATUS_GOVERNANCA!A2:F',
-    });
-
-    await sheets.spreadsheets.values.update({
-      spreadsheetId: sheetsConfig.spreadsheetId,
-      range: 'STATUS_GOVERNANCA!A2:F',
-      valueInputOption: 'USER_ENTERED',
-      requestBody: { values }
-    });
+      const values = order.map(id => [dayRooms[id]?.condition || 'sujo']);
+      
+      // Calculate start row based on previous blocks' lengths
+      let startRow = 2;
+      for (let i = 0; i < dayIndex; i++) {
+        startRow += sheetRoomOrder[i].length + 1; // +1 for the empty row
+      }
+      
+      const range = `STATUS_GOVERNANCA!C${startRow}:C${startRow + order.length - 1}`;
+      
+      await sheets.spreadsheets.values.update({
+        spreadsheetId: sheetsConfig.spreadsheetId,
+        range,
+        valueInputOption: 'USER_ENTERED',
+        requestBody: { values }
+      });
+    }
   } catch (error) {
     console.error('Error syncing to sheets:', error);
   }
@@ -540,35 +576,86 @@ async function syncFromSheets() {
   try {
     const response = await sheets.spreadsheets.values.batchGet({
       spreadsheetId: sheetsConfig.spreadsheetId,
-      ranges: ['DADOS_BRUTOS_HITS!A2:H', 'VINCULACAO_HOJE!A2:A', 'STATUS_GOVERNANCA!A2:F', 'PEDIDOS!A2:E'],
+      ranges: ['STATUS_GOVERNANCA!A2:E2000', 'PEDIDOS!A2:E'],
     });
 
-    const rawData = response.data.valueRanges?.[0].values || [];
-    const vinculacaoData = response.data.valueRanges?.[1].values || [];
-    const governancaData = response.data.valueRanges?.[2].values || [];
-    const pedidosData = response.data.valueRanges?.[3].values || [];
+    const governancaData = response.data.valueRanges?.[0].values || [];
+    const pedidosData = response.data.valueRanges?.[1].values || [];
 
-    // Reset status to vago before applying new data
-    Object.values(rooms).forEach((r: any) => {
-      r.status = 'vago';
-      r.pax = 0;
-      r.departureDate = '';
+    const blocks: any[][] = [];
+    let currentBlock: any[] = [];
+    
+    governancaData.forEach((row) => {
+      const isEmpty = row.length === 0 || row.every(cell => !cell || String(cell).trim() === '');
+      if (isEmpty) {
+        if (currentBlock.length > 0) {
+          blocks.push(currentBlock);
+          currentBlock = [];
+        }
+      } else {
+        currentBlock.push(row);
+      }
     });
+    if (currentBlock.length > 0) blocks.push(currentBlock);
 
-    // Sync condition and dnd from STATUS_GOVERNANCA first
-    if (governancaData && governancaData.length) {
-      governancaData.forEach(row => {
-        const id = String(row[0] || '').trim();
-        if (id && rooms[id]) {
-          const condition = String(row[2] || '').toLowerCase().trim();
-          const dnd = String(row[5] || '').toLowerCase().trim() === 'sim';
-          
-          if (['limpo', 'sujo', 'vestir'].includes(condition)) {
-            rooms[id].condition = condition;
+    if (blocks.length === 0 && governancaData.length > 0) {
+      blocks.push(governancaData);
+    }
+
+    const oldDailyRooms = dailyRooms;
+    dailyRooms = blocks.map(() => createInitialRooms());
+    sheetRoomOrder = blocks.map(() => []);
+
+    blocks.forEach((block, dayIndex) => {
+      const dayRooms = dailyRooms[dayIndex];
+      const oldDayRooms = oldDailyRooms[dayIndex] || {};
+      const dayOrder = sheetRoomOrder[dayIndex];
+
+      block.forEach((row) => {
+        const id = String(row[0] || '').trim().replace(/^0+/, '');
+        dayOrder.push(id);
+
+        if (id && dayRooms[id]) {
+          // Preserve manual flags if room existed before
+          if (oldDayRooms[id]) {
+            dayRooms[id].arrumacao = oldDayRooms[id].arrumacao;
+            dayRooms[id].trocaEnxoval = oldDayRooms[id].trocaEnxoval;
+            dayRooms[id].dnd = oldDayRooms[id].dnd;
+            dayRooms[id].linenDelivered = oldDayRooms[id].linenDelivered;
           }
-          rooms[id].dnd = dnd;
+
+          const situation = String(row[1] || '').toLowerCase().trim();
+          const statusColC = String(row[2] || '').toLowerCase().trim();
+          const paxRaw = String(row[3] || '').trim();
+          const departureDate = String(row[4] || '').trim();
+          
+          if (situation.includes('saida') && situation.includes('chegada')) {
+            dayRooms[id].status = 'saida_chegada';
+          } else if (situation.includes('interditado') || situation.includes('bloqueado') || situation.includes('manutenção') || situation.includes('manutencao')) {
+            dayRooms[id].status = 'interditado';
+          } else if (situation.includes('ocupado')) {
+            dayRooms[id].status = 'ocupado';
+          } else if (situation.includes('saida') || situation.includes('saída') || situation.includes('check-out') || situation.includes('checkout')) {
+            dayRooms[id].status = 'saida';
+          } else if (situation.includes('chegada') || situation.includes('entrada') || situation.includes('reserva') || situation.includes('check-in') || situation.includes('checkin')) {
+            dayRooms[id].status = 'chegada';
+          } else {
+            dayRooms[id].status = 'vago';
+          }
+
+          if (['limpo', 'sujo', 'vestir'].includes(statusColC)) {
+            dayRooms[id].condition = statusColC;
+          }
+
+          const paxMatch = paxRaw.match(/^(\d+)/);
+          dayRooms[id].pax = paxMatch ? parseInt(paxMatch[1]) : 0;
+          dayRooms[id].departureDate = departureDate;
         }
       });
+    });
+
+    if (dailyRooms.length > 0) {
+      rooms = dailyRooms[0];
     }
 
     // Sync orders from PEDIDOS
@@ -592,129 +679,22 @@ async function syncFromSheets() {
       });
     }
 
-    // Get today's date in DD/MM/YYYY format, adjusted for Brazil timezone
-    const today = new Date();
-    today.setHours(today.getHours() - 3); // UTC-3
-    const dd = String(today.getDate()).padStart(2, '0');
-    const mm = String(today.getMonth() + 1).padStart(2, '0');
-    const m = String(today.getMonth() + 1);
-    const yyyy = today.getFullYear();
-    const yy = String(yyyy).slice(-2);
-    
-    const todayStrings = [
-      `${dd}/${mm}/${yyyy}`,
-      `${dd}/${m}/${yyyy}`,
-      `${dd}/${mm}/${yy}`,
-      `${dd}/${m}/${yy}`,
-      `${yyyy}-${mm}-${dd}`
-    ];
-
-    let debugLogs: string[] = [];
-
-    if (rawData && rawData.length) {
-      rawData.forEach((row, index) => {
-        // Pela imagem, o ID do quarto está na Coluna A (índice 0) mas tem texto junto, ex: "307 (1CSS)"
-        // Precisamos extrair apenas os números iniciais
-        const rawIdCell = String(row[0] || '').trim();
-        const idMatch = rawIdCell.match(/^0*(\d+)/); // Pega os números no começo, ignorando zeros à esquerda
-        const id = idMatch ? idMatch[1] : '';
-        
-        if (id && rooms[id]) {
-          // Pela imagem:
-          // Coluna C (índice 2) = Data de Entrada (ex: 28/03/26 15:17)
-          // Coluna D (índice 3) = Data de Saída (ex: 30/03/2026 13:59)
-          // Coluna E (índice 4) = Status (ex: OCUPADO)
-          // Coluna F (índice 5) = Pax (ex: 2/1)
-          
-          const entryDateFull = row[2] ? String(row[2]).trim() : '';
-          const exitDateFull = row[3] ? String(row[3]).trim() : ''; 
-          const statusRaw = row[4] ? String(row[4]).toLowerCase().trim() : ''; 
-          
-          // Extrai o primeiro número do Pax (antes da barra)
-          const paxRaw = row[5] ? String(row[5]) : '';
-          const paxMatch = paxRaw.match(/^(\d+)/);
-          rooms[id].pax = paxMatch ? parseInt(paxMatch[1]) : 0; 
-          
-          // Extrai apenas a data da string de entrada (ignora a hora)
-          const entryDateMatch = entryDateFull.match(/^(\d{2}\/\d{2}\/\d{2,4})/);
-          const entryDate = entryDateMatch ? entryDateMatch[1] : entryDateFull;
-          
-          // Convert DD/MM/YYYY to YYYY-MM-DD for easier parsing in JS
-          if (entryDate) {
-            const parts = entryDate.split('/');
-            if (parts.length === 3) {
-              const year = parts[2].length === 2 ? `20${parts[2]}` : parts[2];
-              rooms[id].arrivalDate = `${year}-${parts[1]}-${parts[0]}`;
-            } else {
-              rooms[id].arrivalDate = entryDate;
-            }
-          }
-
-          // Extrai apenas a data da string de saída (ignora a hora)
-          const exitDateMatch = exitDateFull.match(/^(\d{2}\/\d{2}\/\d{2,4})/);
-          const exitDate = exitDateMatch ? exitDateMatch[1] : exitDateFull;
-          rooms[id].departureDate = exitDate;
-          
-          const isEntryToday = todayStrings.some(t => entryDate.includes(t));
-          const isExitToday = todayStrings.some(t => exitDate.includes(t));
-          const currentHour = today.getHours();
-          
-          if (index < 10) {
-            debugLogs.push(`Qto ${id} | Saída: "${exitDate}" (Hoje? ${isExitToday}) | Status: "${statusRaw}" | Pax: ${rooms[id].pax}`);
-          }
-          
-          const isOccupied = statusRaw.includes('ocupado') || statusRaw.includes('in-house') || statusRaw.includes('trânsito') || statusRaw.includes('transito');
-          const isReservation = statusRaw.includes('reserva') || statusRaw.includes('entrada') || statusRaw.includes('chegada') || statusRaw.includes('checkin');
-          const isCheckout = statusRaw.includes('saída') || statusRaw.includes('saida') || statusRaw.includes('checkout');
-          const isInterditado = statusRaw.includes('interditado') || statusRaw.includes('bloqueado') || statusRaw.includes('manuten') || statusRaw.includes('inativo');
-
-          if (isInterditado) {
-            rooms[id].status = 'interditado';
-          } else if (isOccupied) {
-            if (isExitToday) {
-              // Se está ocupado mas sai hoje, vira saída (ou vago se já passou das 14h)
-              if (currentHour >= 14 && rooms[id].status !== 'chegada') {
-                rooms[id].status = 'vago';
-              } else if (rooms[id].status !== 'chegada') {
-                rooms[id].status = 'saida';
-              }
-            } else {
-              rooms[id].status = 'ocupado';
-            }
-          } else if (isCheckout || (isExitToday && !isEntryToday)) {
-            if (currentHour >= 14 && rooms[id].status !== 'chegada') {
-              rooms[id].status = 'vago';
-            } else if (rooms[id].status !== 'chegada') {
-              rooms[id].status = 'saida';
-            }
-          } else if (isReservation || isEntryToday) {
-            // Só marca como chegada se a data de entrada for HOJE
-            if (isEntryToday) {
-              rooms[id].status = 'chegada';
-            }
-          }
-        }
-      });
-    }
-
-    if (vinculacaoData && vinculacaoData.length) {
-      vinculacaoData.forEach(row => {
-        const id = String(row[0] || '').trim().replace(/^0+/, '');
-        // Só marca como chegada se o quarto estiver vago. Se estiver ocupado ou em saída, mantém o status atual.
-        if (rooms[id] && rooms[id].status === 'vago') {
-          rooms[id].status = 'chegada';
-        }
-      });
-    }
-
     lastSyncStatus = { 
       status: 'success', 
       message: 'Sincronizado com sucesso', 
-      time: new Date().toLocaleTimeString('pt-BR', { timeZone: 'America/Sao_Paulo' }),
-      debug: debugLogs.join(' | ')
+      time: new Date().toLocaleTimeString('pt-BR', { timeZone: 'America/Sao_Paulo' })
     };
     io.emit('sync_status', lastSyncStatus);
-    io.emit('initial_data', { rooms: Object.values(rooms), orders, users: Object.values(users), packSizes, requestableItems, swapRequests, maintenanceRequests });
+    io.emit('initial_data', { 
+      rooms: Object.values(rooms), 
+      dailyRooms,
+      orders, 
+      users: Object.values(users), 
+      packSizes, 
+      requestableItems, 
+      swapRequests, 
+      maintenanceRequests 
+    });
   } catch (error: any) {
     console.error('Error syncing from sheets:', error);
     lastSyncStatus = { 

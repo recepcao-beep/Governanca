@@ -1,16 +1,21 @@
 import React, { useState } from 'react';
 import { useSocket } from '../SocketContext';
 import { PackageOpen, Users, CheckCircle2, BedDouble } from 'lucide-react';
+import clsx from 'clsx';
 
 export default function RoupariaTab({ user }: { user: any }) {
-  const { rooms, updateRoom, packSizes } = useSocket();
+  const { rooms, dailyRooms, updateRoom, packSizes } = useSocket();
   const [activeSubTab, setActiveSubTab] = useState<'lencois' | 'chegadas'>('lencois');
+  const [selectedDayIndex, setSelectedDayIndex] = useState(0);
+
+  // Get rooms for the selected day
+  const currentRooms = selectedDayIndex === 0 ? rooms : (dailyRooms[selectedDayIndex] ? Object.values(dailyRooms[selectedDayIndex]) : []);
 
   // Calculate required linens for rooms that are NOT limpo
-  const roomsToClean = rooms.filter(r => r.condition !== 'limpo');
+  const roomsToClean = currentRooms.filter(r => r.condition !== 'limpo');
   
   // Group by floor
-  const floors = Array.from(new Set(roomsToClean.map(r => r.floor))).sort((a, b) => a - b);
+  const floors = Array.from(new Set(roomsToClean.map(r => r.floor))).sort((a: number, b: number) => a - b);
   
   const floorData = floors.map(floor => {
     const floorRooms = roomsToClean.filter(r => r.floor === floor);
@@ -47,7 +52,10 @@ export default function RoupariaTab({ user }: { user: any }) {
   const totalSolteiroPacks = Math.ceil(totalLencolSolteiro / packSizes.lencolSolteiro);
   const totalFronhasPacks = Math.ceil(totalFronhas / packSizes.fronhas);
 
-  const chegadas = rooms.filter(r => r.status === 'chegada');
+  const chegadas = currentRooms.filter(r => r.status === 'chegada');
+
+  // Group chegadas by floor
+  const chegadasFloors = Array.from(new Set(chegadas.map(r => r.floor))).sort((a: number, b: number) => a - b);
 
   const handleConfirmChegada = (roomId: string) => {
     updateRoom(roomId, { linenDelivered: true });
@@ -57,6 +65,20 @@ export default function RoupariaTab({ user }: { user: any }) {
     <div className="space-y-4 pb-8">
       <div className="flex items-center justify-between">
         <h2 className="text-xl font-bold text-gray-800 dark:text-gray-100">Rouparia</h2>
+        <div className="flex items-center gap-2">
+          <select 
+            value={selectedDayIndex}
+            onChange={(e) => setSelectedDayIndex(parseInt(e.target.value))}
+            className="bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-lg px-3 py-1.5 text-sm font-bold shadow-sm focus:ring-2 focus:ring-blue-500 outline-none"
+          >
+            <option value={0}>Hoje</option>
+            {dailyRooms.length > 1 && dailyRooms.slice(1).map((_, idx) => (
+              <option key={idx + 1} value={idx + 1}>
+                {idx === 0 ? 'Amanhã' : `Dia ${idx + 2}`}
+              </option>
+            ))}
+          </select>
+        </div>
       </div>
 
       <div className="flex rounded-xl bg-gray-200 dark:bg-gray-700 p-1 overflow-x-auto no-scrollbar">
@@ -134,42 +156,62 @@ export default function RoupariaTab({ user }: { user: any }) {
           </div>
         </div>
       ) : (
-        <div className="space-y-4">
+        <div className="space-y-6">
           <h3 className="text-lg font-bold text-gray-800 dark:text-gray-100">Chegadas Previstas</h3>
           {chegadas.length === 0 ? (
             <div className="flex flex-col items-center justify-center rounded-xl border border-dashed border-gray-300 dark:border-gray-600 bg-gray-50 dark:bg-gray-900 p-8 text-center text-gray-500 dark:text-gray-400">
               <BedDouble size={48} className="mb-4 opacity-20" />
-              <p>Nenhuma chegada prevista para hoje.</p>
+              <p>Nenhuma chegada prevista para este dia.</p>
             </div>
           ) : (
-            <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
-              {chegadas.map(room => (
-                <div key={room.id} className="flex flex-col rounded-xl border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800 p-4 shadow-sm">
-                  <div className="mb-3 flex items-center justify-between border-b border-gray-100 dark:border-gray-800 pb-3">
-                    <span className="text-lg font-bold text-gray-800 dark:text-gray-100">
-                      Apt {room.id}
-                    </span>
-                    <span className="flex items-center gap-1 text-sm font-medium text-gray-600 dark:text-gray-300">
-                      <Users size={16} /> {room.pax} pax
-                    </span>
+            <div className="space-y-8">
+              {chegadasFloors.map(floor => {
+                const floorChegadas = chegadas.filter(r => r.floor === floor);
+                return (
+                  <div key={floor} className="space-y-3">
+                    <h4 className="font-bold text-gray-500 dark:text-gray-400 text-sm uppercase tracking-wider flex items-center gap-2">
+                      <div className="h-px flex-1 bg-gray-200 dark:bg-gray-700" />
+                      Andar {floor}
+                      <div className="h-px flex-1 bg-gray-200 dark:bg-gray-700" />
+                    </h4>
+                    <div className="grid grid-cols-2 gap-3 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-6">
+                      {floorChegadas.map(room => (
+                        <div 
+                          key={room.id} 
+                          className={`relative flex flex-col items-center justify-center aspect-square rounded-2xl border transition-all duration-300 shadow-sm ${
+                            room.linenDelivered 
+                              ? 'bg-emerald-50/50 border-emerald-300 dark:bg-emerald-900/10 dark:border-emerald-800' 
+                              : 'bg-white border-gray-200 dark:bg-gray-800 dark:border-gray-700'
+                          }`}
+                        >
+                          <div className="text-center">
+                            <div className="text-xl font-black text-gray-900 dark:text-gray-50 leading-none">
+                              {room.id}
+                            </div>
+                            <div className="mt-1 flex items-center justify-center gap-1 text-[10px] font-bold text-gray-500 dark:text-gray-400 uppercase tracking-wider">
+                              <Users size={10} /> {room.pax} pax
+                            </div>
+                          </div>
+
+                          <div className="mt-3">
+                            <button
+                              onClick={() => updateRoom(room.id, { linenDelivered: !room.linenDelivered }, selectedDayIndex)}
+                              className={clsx(
+                                "flex h-10 w-10 items-center justify-center rounded-full transition-all active:scale-90 shadow-lg",
+                                room.linenDelivered 
+                                  ? "bg-emerald-500 text-white shadow-emerald-500/20" 
+                                  : "bg-blue-600 text-white shadow-blue-600/20 hover:bg-blue-700"
+                              )}
+                            >
+                              <CheckCircle2 size={20} />
+                            </button>
+                          </div>
+                        </div>
+                      ))}
+                    </div>
                   </div>
-                  
-                  <div className="mt-auto pt-2">
-                    {room.linenDelivered ? (
-                      <div className="flex items-center justify-center gap-2 rounded-lg bg-green-50 dark:bg-green-900/20 py-2 text-sm font-bold text-green-600 dark:text-green-400">
-                        <CheckCircle2 size={18} /> Entregue (Chegada)
-                      </div>
-                    ) : (
-                      <button
-                        onClick={() => handleConfirmChegada(room.id)}
-                        className="w-full rounded-lg bg-blue-600 py-2 text-sm font-bold text-white transition-colors hover:bg-blue-700"
-                      >
-                        Confirmar Entrega
-                      </button>
-                    )}
-                  </div>
-                </div>
-              ))}
+                );
+              })}
             </div>
           )}
         </div>

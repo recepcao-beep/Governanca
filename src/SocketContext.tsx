@@ -57,6 +57,7 @@ interface PackSizes {
 interface SocketContextData {
   socket: Socket | null;
   rooms: Room[];
+  dailyRooms: { [id: string]: Room }[];
   orders: Order[];
   swapRequests: SwapRequest[];
   maintenanceRequests: MaintenanceRequest[];
@@ -64,7 +65,7 @@ interface SocketContextData {
   packSizes: PackSizes;
   requestableItems: string[];
   syncStatus: { status: string; message: string; time: string; debug?: string };
-  updateRoom: (id: string, updates: Partial<Room>) => void;
+  updateRoom: (id: string, updates: Partial<Room>, dayIndex?: number) => void;
   swapRooms: (oldRoomId: string, newRoomId: string) => void;
   requestSwap: (oldRoomId: string, newRoomId: string, reason: string, createdBy: string) => void;
   approveSwap: (id: string) => void;
@@ -78,6 +79,7 @@ interface SocketContextData {
   deleteRoom: (id: string) => void;
   updatePackSizes: (sizes: PackSizes) => void;
   updateRequestableItems: (items: string[]) => void;
+  triggerSync: () => void;
 }
 
 const SocketContext = createContext<SocketContextData>({} as SocketContextData);
@@ -85,6 +87,7 @@ const SocketContext = createContext<SocketContextData>({} as SocketContextData);
 export const SocketProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
   const [socket, setSocket] = useState<Socket | null>(null);
   const [rooms, setRooms] = useState<Room[]>([]);
+  const [dailyRooms, setDailyRooms] = useState<{ [id: string]: Room }[]>([]);
   const [orders, setOrders] = useState<Order[]>([]);
   const [swapRequests, setSwapRequests] = useState<SwapRequest[]>([]);
   const [maintenanceRequests, setMaintenanceRequests] = useState<MaintenanceRequest[]>([]);
@@ -103,6 +106,7 @@ export const SocketProvider: React.FC<{ children: React.ReactNode }> = ({ childr
 
     newSocket.on('initial_data', (data) => {
       setRooms(data.rooms);
+      if (data.dailyRooms) setDailyRooms(data.dailyRooms);
       setOrders(data.orders);
       setUsers(data.users);
       if (data.packSizes) setPackSizes(data.packSizes);
@@ -123,8 +127,17 @@ export const SocketProvider: React.FC<{ children: React.ReactNode }> = ({ childr
       setRequestableItems(newItems);
     });
 
-    newSocket.on('room_updated', (updatedRoom: Room) => {
-      setRooms((prev) => prev.map((r) => (r.id === updatedRoom.id ? updatedRoom : r)));
+    newSocket.on('room_updated', ({ updatedRoom, dayIndex }: { updatedRoom: Room, dayIndex: number }) => {
+      if (dayIndex === 0) {
+        setRooms((prev) => prev.map((r) => (r.id === updatedRoom.id ? updatedRoom : r)));
+      }
+      setDailyRooms((prev) => {
+        const next = [...prev];
+        if (next[dayIndex]) {
+          next[dayIndex] = { ...next[dayIndex], [updatedRoom.id]: updatedRoom };
+        }
+        return next;
+      });
     });
 
     newSocket.on('order_created', (newOrder: Order) => {
@@ -164,8 +177,8 @@ export const SocketProvider: React.FC<{ children: React.ReactNode }> = ({ childr
     };
   }, []);
 
-  const updateRoom = (id: string, updates: Partial<Room>) => {
-    socket?.emit('update_room', { id, updates });
+  const updateRoom = (id: string, updates: Partial<Room>, dayIndex: number = 0) => {
+    socket?.emit('update_room', { id, updates, dayIndex });
   };
 
   const swapRooms = (oldRoomId: string, newRoomId: string) => {
@@ -220,8 +233,12 @@ export const SocketProvider: React.FC<{ children: React.ReactNode }> = ({ childr
     socket?.emit('update_requestable_items', items);
   };
 
+  const triggerSync = () => {
+    socket?.emit('trigger_sync');
+  };
+
   return (
-    <SocketContext.Provider value={{ socket, rooms, orders, swapRequests, maintenanceRequests, users, packSizes, requestableItems, syncStatus, updateRoom, swapRooms, requestSwap, approveSwap, rejectSwap, createOrder, updateOrderStatus, createMaintenance, resolveMaintenance, approveUser, saveSheetsConfig, deleteRoom, updatePackSizes, updateRequestableItems }}>
+    <SocketContext.Provider value={{ socket, rooms, dailyRooms, orders, swapRequests, maintenanceRequests, users, packSizes, requestableItems, syncStatus, updateRoom, swapRooms, requestSwap, approveSwap, rejectSwap, createOrder, updateOrderStatus, createMaintenance, resolveMaintenance, approveUser, saveSheetsConfig, deleteRoom, updatePackSizes, updateRequestableItems, triggerSync }}>
       {children}
     </SocketContext.Provider>
   );

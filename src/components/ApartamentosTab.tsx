@@ -4,16 +4,20 @@ import { BedDouble, Sparkles, Trash2, User, Calendar, BellOff, CheckCircle2, Arr
 import clsx from 'clsx';
 
 export default function ApartamentosTab({ user }: { user: any }) {
-  const { rooms, updateRoom, createOrder, requestSwap, createMaintenance, swapRooms, swapRequests } = useSocket();
+  const { rooms, dailyRooms, updateRoom, createOrder, requestSwap, createMaintenance, swapRooms, swapRequests } = useSocket();
   const [selectedFloor, setSelectedFloor] = useState<number | null>(null);
   const [selectedRoom, setSelectedRoom] = useState<any | null>(null);
   const [showArrumacaoModal, setShowArrumacaoModal] = useState(false);
   const [showSwapModal, setShowSwapModal] = useState(false);
-  const [filter, setFilter] = useState<'todos' | 'ocupado' | 'limpo' | 'sujo' | 'saida' | 'vestir' | 'chegada'>('todos');
+  const [filter, setFilter] = useState<'todos' | 'ocupado' | 'limpo' | 'sujo' | 'saida' | 'vestir' | 'chegada' | 'saida_chegada'>('todos');
   const [showFilterMenu, setShowFilterMenu] = useState(false);
+  const [selectedDayIndex, setSelectedDayIndex] = useState(0);
 
   const floors = [200, 300, 400, 500, 600, 700];
   const allowedFloors = user.role === 'gestor' ? floors : user.floors || [];
+
+  const currentDailyRooms = dailyRooms[selectedDayIndex] || {};
+  const displayRooms = selectedDayIndex === 0 ? rooms : Object.values(currentDailyRooms);
 
   if (allowedFloors.length === 0) {
     return <div className="p-4 text-center text-gray-500 dark:text-gray-400">Nenhum andar atribuído a você.</div>;
@@ -90,29 +94,46 @@ export default function ApartamentosTab({ user }: { user: any }) {
                 </button>
                 
                 {showFilterMenu && (
-                  <div className="absolute left-0 top-full mt-2 w-48 rounded-xl border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800 p-2 shadow-lg">
+                  <div className="absolute left-0 top-full mt-2 w-48 rounded-xl border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800 p-2 shadow-lg z-20">
                     <FilterOption label="Todos" value="todos" current={filter} onSelect={(v) => { setFilter(v as any); setShowFilterMenu(false); }} />
                     <FilterOption label="Ocupados" value="ocupado" current={filter} onSelect={(v) => { setFilter(v as any); setShowFilterMenu(false); }} />
                     <FilterOption label="Chegadas" value="chegada" current={filter} onSelect={(v) => { setFilter(v as any); setShowFilterMenu(false); }} />
                     <FilterOption label="Saídas (Check-out)" value="saida" current={filter} onSelect={(v) => { setFilter(v as any); setShowFilterMenu(false); }} />
+                    <FilterOption label="Saída com Chegada" value="saida_chegada" current={filter} onSelect={(v) => { setFilter(v as any); setShowFilterMenu(false); }} />
                     <FilterOption label="Limpos" value="limpo" current={filter} onSelect={(v) => { setFilter(v as any); setShowFilterMenu(false); }} />
                     <FilterOption label="Sujos" value="sujo" current={filter} onSelect={(v) => { setFilter(v as any); setShowFilterMenu(false); }} />
                     <FilterOption label="Vestir" value="vestir" current={filter} onSelect={(v) => { setFilter(v as any); setShowFilterMenu(false); }} />
                   </div>
                 )}
               </div>
+
+              <div className="flex items-center gap-2 ml-2">
+                <Calendar size={16} className="text-gray-400" />
+                <select 
+                  value={selectedDayIndex}
+                  onChange={(e) => setSelectedDayIndex(parseInt(e.target.value))}
+                  className="bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-lg px-2 py-1.5 text-xs sm:text-sm font-medium text-gray-700 dark:text-gray-200 outline-none focus:ring-2 focus:ring-blue-500/20"
+                >
+                  {dailyRooms.map((_, idx) => (
+                    <option key={idx} value={idx}>
+                      {idx === 0 ? 'Hoje' : idx === 1 ? 'Amanhã' : `Dia +${idx}`}
+                    </option>
+                  ))}
+                </select>
+              </div>
             </div>
             <h2 className="text-base sm:text-lg font-bold text-gray-800 dark:text-gray-100">Andar {selectedFloor}</h2>
           </div>
           
           <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-3 pt-2">
-            {rooms
+            {displayRooms
               .filter(r => r.floor === selectedFloor)
               .filter(r => {
                 if (filter === 'todos') return true;
                 if (filter === 'ocupado') return r.status === 'ocupado';
                 if (filter === 'saida') return r.status === 'saida';
                 if (filter === 'chegada') return r.status === 'chegada';
+                if (filter === 'saida_chegada') return r.status === 'saida_chegada';
                 if (filter === 'limpo') return r.condition === 'limpo';
                 if (filter === 'sujo') return r.condition === 'sujo';
                 if (filter === 'vestir') return r.condition === 'vestir';
@@ -122,7 +143,7 @@ export default function ApartamentosTab({ user }: { user: any }) {
               <RoomCard
                 key={room.id}
                 room={room}
-                onUpdate={(updates) => updateRoom(room.id, updates)}
+                onUpdate={(updates) => updateRoom(room.id, updates, selectedDayIndex)}
                 onOpenArrumacao={() => handleOpenArrumacao(room)}
               />
             ))}
@@ -172,6 +193,7 @@ function RoomCard({ room, onUpdate, onOpenArrumacao }: { key?: React.Key; room: 
     saida: 'bg-red-50 dark:bg-red-900/30 border-red-200 text-red-900',
     chegada: 'bg-emerald-50 border-emerald-200 text-emerald-900',
     ocupado: 'bg-blue-50 dark:bg-blue-900/30 border-blue-200 dark:border-blue-800/50 text-blue-900',
+    saida_chegada: 'bg-purple-50 border-purple-300 text-purple-900 border-2 shadow-md',
   };
 
   const badgeColors = {
@@ -180,6 +202,7 @@ function RoomCard({ room, onUpdate, onOpenArrumacao }: { key?: React.Key; room: 
     saida: 'bg-red-200 text-red-800 dark:text-red-200',
     chegada: 'bg-emerald-200 text-emerald-800',
     ocupado: 'bg-blue-200 text-blue-800 dark:text-blue-200',
+    saida_chegada: 'bg-purple-200 text-purple-800',
   };
 
   const isSecondNightOrMore = () => {
@@ -263,7 +286,7 @@ function RoomCard({ room, onUpdate, onOpenArrumacao }: { key?: React.Key; room: 
         </div>
       );
     }
-  } else if (room.status === 'vago' || room.status === 'chegada') {
+  } else if (room.status === 'vago' || room.status === 'chegada' || room.status === 'saida_chegada') {
     const conditionColors = {
       sujo: 'bg-red-800 text-white hover:bg-red-700 border-red-900',
       limpo: 'bg-green-600 text-white hover:bg-green-50 dark:bg-green-900/300 border-green-700',
@@ -347,7 +370,7 @@ function RoomCard({ room, onUpdate, onOpenArrumacao }: { key?: React.Key; room: 
         <span className="text-2xl font-bold tracking-tight">{room.id}</span>
         <div className="flex flex-col items-end gap-1 flex-shrink-0">
           <span className={clsx('text-[9px] sm:text-[10px] font-bold uppercase tracking-wider px-2 py-0.5 rounded-full text-center', badgeColors[room.status as keyof typeof badgeColors])}>
-            {room.status}
+            {room.status === 'saida_chegada' ? 'SAIDA COM CHEGADA' : room.status}
           </span>
         </div>
       </div>

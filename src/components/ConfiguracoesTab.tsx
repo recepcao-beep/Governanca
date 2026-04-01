@@ -3,7 +3,7 @@ import { useSocket } from '../SocketContext';
 import { AlertTriangle, FileSpreadsheet, CheckCircle2, XCircle, RefreshCw, X, Package, ListPlus } from 'lucide-react';
 
 export default function ConfiguracoesTab({ user }: { user: any }) {
-  const { syncStatus, rooms, deleteRoom, packSizes, updatePackSizes, requestableItems, updateRequestableItems } = useSocket();
+  const { syncStatus, rooms, deleteRoom, packSizes, updatePackSizes, requestableItems, updateRequestableItems, triggerSync } = useSocket();
   const [roomToDelete, setRoomToDelete] = useState<string | null>(null);
   
   const [localPackSizes, setLocalPackSizes] = useState(packSizes);
@@ -212,6 +212,16 @@ export default function ConfiguracoesTab({ user }: { user: any }) {
           As credenciais do robô e o ID da planilha já foram configurados no código do servidor. A sincronização ocorre automaticamente a cada 30 segundos.
         </p>
         
+        <div className="flex flex-col sm:flex-row gap-4 mb-6">
+          <button 
+            onClick={triggerSync}
+            className="flex items-center justify-center gap-2 rounded-lg bg-blue-600 px-6 py-3 font-bold text-white hover:bg-blue-700 transition-all active:scale-95 shadow-md"
+          >
+            <RefreshCw size={20} className={syncStatus.status === 'pending' ? 'animate-spin' : ''} />
+            Sincronizar Agora
+          </button>
+        </div>
+        
         <div className="rounded-lg bg-white dark:bg-gray-800 p-4 shadow-sm">
           <h3 className="mb-3 text-sm font-bold text-gray-700 dark:text-gray-200">Status da Sincronização</h3>
           
@@ -249,15 +259,15 @@ export default function ConfiguracoesTab({ user }: { user: any }) {
         <ul className="space-y-3 text-sm text-gray-600 dark:text-gray-300">
           <li className="flex gap-2">
             <span className="font-bold text-blue-600 dark:text-blue-400">1.</span>
-            <span>O sistema lê os apartamentos que estão chegando da aba <strong>VINCULACAO_HOJE</strong> (Coluna A).</span>
+            <span>O sistema lê os dados da aba <strong>STATUS_GOVERNANCA</strong> (Colunas A, B, D e E).</span>
           </li>
           <li className="flex gap-2">
             <span className="font-bold text-blue-600 dark:text-blue-400">2.</span>
-            <span>O sistema lê o status geral e a quantidade de pessoas da aba <strong>DADOS_BRUTOS_HITS</strong> (Colunas E e F).</span>
+            <span>A coluna B define a <strong>Situação</strong> (Vago, Ocupado, Chegada, Saída, Interditado).</span>
           </li>
           <li className="flex gap-2">
             <span className="font-bold text-blue-600 dark:text-blue-400">3.</span>
-            <span>Quando uma camareira atualiza a condição do quarto (Sujo, Limpo, Não Perturbe), o sistema salva essa informação na aba <strong>STATUS_GOVERNANCA</strong>.</span>
+            <span>O sistema atualiza <strong>apenas a Coluna C</strong> (Status de Limpeza) na planilha.</span>
           </li>
         </ul>
       </div>
