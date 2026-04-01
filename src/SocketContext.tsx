@@ -9,6 +9,7 @@ interface Room {
   pax: number;
   departureDate: string;
   dnd: boolean;
+  linenDelivered?: boolean;
 }
 
 interface Order {
@@ -26,6 +27,27 @@ interface User {
   floors: number[];
 }
 
+interface SwapRequest {
+  id: string;
+  oldRoomId: string;
+  newRoomId: string;
+  reason: string;
+  status: 'pending' | 'approved' | 'rejected';
+  createdAt: string;
+  createdBy: string;
+}
+
+interface MaintenanceRequest {
+  id: string;
+  roomId: string;
+  description: string;
+  photoUrl?: string;
+  status: 'pendente' | 'corrigida' | 'nao_executada';
+  resolutionReason?: string;
+  createdAt: string;
+  createdBy: string;
+}
+
 interface PackSizes {
   lencolCasal: number;
   lencolSolteiro: number;
@@ -36,13 +58,21 @@ interface SocketContextData {
   socket: Socket | null;
   rooms: Room[];
   orders: Order[];
+  swapRequests: SwapRequest[];
+  maintenanceRequests: MaintenanceRequest[];
   users: User[];
   packSizes: PackSizes;
   requestableItems: string[];
   syncStatus: { status: string; message: string; time: string; debug?: string };
   updateRoom: (id: string, updates: Partial<Room>) => void;
+  swapRooms: (oldRoomId: string, newRoomId: string) => void;
+  requestSwap: (oldRoomId: string, newRoomId: string, reason: string, createdBy: string) => void;
+  approveSwap: (id: string) => void;
+  rejectSwap: (id: string) => void;
   createOrder: (roomId: string, items: { item: string; quantity: number }[]) => void;
   updateOrderStatus: (id: string, status: Order['status']) => void;
+  createMaintenance: (roomId: string, description: string, photoUrl: string | undefined, createdBy: string) => void;
+  resolveMaintenance: (id: string, status: 'corrigida' | 'nao_executada', reason?: string) => void;
   approveUser: (email: string, floors: number[]) => void;
   saveSheetsConfig: (config: any) => void;
   deleteRoom: (id: string) => void;
@@ -56,6 +86,8 @@ export const SocketProvider: React.FC<{ children: React.ReactNode }> = ({ childr
   const [socket, setSocket] = useState<Socket | null>(null);
   const [rooms, setRooms] = useState<Room[]>([]);
   const [orders, setOrders] = useState<Order[]>([]);
+  const [swapRequests, setSwapRequests] = useState<SwapRequest[]>([]);
+  const [maintenanceRequests, setMaintenanceRequests] = useState<MaintenanceRequest[]>([]);
   const [users, setUsers] = useState<User[]>([]);
   const [packSizes, setPackSizes] = useState<PackSizes>({ lencolCasal: 25, lencolSolteiro: 25, fronhas: 50 });
   const [requestableItems, setRequestableItems] = useState<string[]>([]);
@@ -75,6 +107,8 @@ export const SocketProvider: React.FC<{ children: React.ReactNode }> = ({ childr
       setUsers(data.users);
       if (data.packSizes) setPackSizes(data.packSizes);
       if (data.requestableItems) setRequestableItems(data.requestableItems);
+      if (data.swapRequests) setSwapRequests(data.swapRequests);
+      if (data.maintenanceRequests) setMaintenanceRequests(data.maintenanceRequests);
     });
 
     newSocket.on('sync_status', (status) => {
@@ -101,6 +135,22 @@ export const SocketProvider: React.FC<{ children: React.ReactNode }> = ({ childr
       setOrders((prev) => prev.map((o) => (o.id === updatedOrder.id ? updatedOrder : o)));
     });
 
+    newSocket.on('swap_request_created', (req: SwapRequest) => {
+      setSwapRequests((prev) => [...prev, req]);
+    });
+
+    newSocket.on('swap_request_updated', (updatedReq: SwapRequest) => {
+      setSwapRequests((prev) => prev.map((r) => (r.id === updatedReq.id ? updatedReq : r)));
+    });
+
+    newSocket.on('maintenance_created', (req: MaintenanceRequest) => {
+      setMaintenanceRequests((prev) => [...prev, req]);
+    });
+
+    newSocket.on('maintenance_updated', (updatedReq: MaintenanceRequest) => {
+      setMaintenanceRequests((prev) => prev.map((r) => (r.id === updatedReq.id ? updatedReq : r)));
+    });
+
     newSocket.on('user_updated', (updatedUser: User) => {
       setUsers((prev) => prev.map((u) => (u.email === updatedUser.email ? updatedUser : u)));
     });
@@ -118,12 +168,36 @@ export const SocketProvider: React.FC<{ children: React.ReactNode }> = ({ childr
     socket?.emit('update_room', { id, updates });
   };
 
+  const swapRooms = (oldRoomId: string, newRoomId: string) => {
+    socket?.emit('swap_rooms', { oldRoomId, newRoomId });
+  };
+
+  const requestSwap = (oldRoomId: string, newRoomId: string, reason: string, createdBy: string) => {
+    socket?.emit('request_swap', { oldRoomId, newRoomId, reason, createdBy });
+  };
+
+  const approveSwap = (id: string) => {
+    socket?.emit('approve_swap', id);
+  };
+
+  const rejectSwap = (id: string) => {
+    socket?.emit('reject_swap', id);
+  };
+
   const createOrder = (roomId: string, items: { item: string; quantity: number }[]) => {
     socket?.emit('create_order', { roomId, items });
   };
 
   const updateOrderStatus = (id: string, status: Order['status']) => {
     socket?.emit('update_order_status', { id, status });
+  };
+
+  const createMaintenance = (roomId: string, description: string, photoUrl: string | undefined, createdBy: string) => {
+    socket?.emit('create_maintenance', { roomId, description, photoUrl, createdBy });
+  };
+
+  const resolveMaintenance = (id: string, status: 'corrigida' | 'nao_executada', reason?: string) => {
+    socket?.emit('resolve_maintenance', { id, status, reason });
   };
 
   const approveUser = (email: string, floors: number[]) => {
@@ -147,7 +221,7 @@ export const SocketProvider: React.FC<{ children: React.ReactNode }> = ({ childr
   };
 
   return (
-    <SocketContext.Provider value={{ socket, rooms, orders, users, packSizes, requestableItems, syncStatus, updateRoom, createOrder, updateOrderStatus, approveUser, saveSheetsConfig, deleteRoom, updatePackSizes, updateRequestableItems }}>
+    <SocketContext.Provider value={{ socket, rooms, orders, swapRequests, maintenanceRequests, users, packSizes, requestableItems, syncStatus, updateRoom, swapRooms, requestSwap, approveSwap, rejectSwap, createOrder, updateOrderStatus, createMaintenance, resolveMaintenance, approveUser, saveSheetsConfig, deleteRoom, updatePackSizes, updateRequestableItems }}>
       {children}
     </SocketContext.Provider>
   );

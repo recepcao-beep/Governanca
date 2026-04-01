@@ -5,6 +5,8 @@ import { Server } from 'socket.io';
 import jwt from 'jsonwebtoken';
 import { google } from 'googleapis';
 import path from 'path';
+import { Readable } from 'stream';
+import fs from 'fs';
 
 const app = express();
 const httpServer = createServer(app);
@@ -12,18 +14,20 @@ const io = new Server(httpServer, {
   cors: { origin: '*' }
 });
 
-app.use(express.json());
+app.use(express.json({ limit: '50mb' }));
 
 // In-memory database
 const users: Record<string, any> = {};
 const rooms: Record<string, any> = {};
 const orders: any[] = [];
+const maintenanceRequests: any[] = [];
+const swapRequests: any[] = [];
 let sheetsConfig: any = {
   spreadsheetId: process.env.SPREADSHEET_ID || '1oMKFu9aobTP5sBuF0jjSR4In3Z6EcWfATCe_9ijNFXA',
   clientEmail: process.env.SHEETS_CLIENT_EMAIL || 'robo-gov@governanca-491823.iam.gserviceaccount.com',
   privateKey: process.env.SHEETS_PRIVATE_KEY || '-----BEGIN PRIVATE KEY-----\nMIIEvwIBADANBgkqhkiG9w0BAQEFAASCBKkwggSlAgEAAoIBAQCnXBJLFHqwYj9G\n+3vIbt/ZiMSrfD438w6osD4mL5Vh/e6HVN7tK9v3lkXaRT2Rb0UW9keld6sQ1eJ0\nUKQGa7P27wdZ7enJW6SmdgJkCi1OoVq51x4zPzxfibYC/aQLnWpct8AydxcXClki\n7PDBN7oNz+6/BkKEJZQ/Svl9Q+di4W/OW0wuFcpsMu6ZZHE+rvd7lws/I53EULuK\n1kq0CQzAx74Z33k2bLWFXY5O+XJPE5HOpxqhjeqEmJjE+S3529WGa2YNL9LsTXUP\nrWYQm5J9L4hYN4UCoq9rkE6yGaRmrddzWAEo2QNXX/gCbjPEULPTY8WNyoVVP7SS\nYi3H+vWNAgMBAAECggEAH6/qlMWZXzkS4wUtkCsR/hWLqy5Yd25xOZY5BjDfN1EF\nbyEuHji+KrgMnMGcYSNwsOLLePRZ8tOUT1KPY9nTlq72NNw7dhEAcTYJyNg2cNtT\nGrm0sZ5I94vS5ukQPNS+tTRjUwrCV+3xJ5A2G1dKRmA2w3tTb8LPuVYgO8v2DP30\nrhczDRPxw1Jq5VKsc9+S3IvHRhFy8mplcB++GcmlddiLIwd9OyqbiGtSkKlkVIFN\nX9NuAW7lo3bF1AZ1GuR6bJe/YKjuuN6HVfTQg0/nlbhfeG8aNF72SZ6eh/9PAu8f\ncLEhqFMXNyeOKexU9onJdQLrY9mtD5NK1ZI7JaNmQQKBgQDUIuaJRFdBTbZmfBGV\nr4iGrWx0JrcSY4KwI3uOVOOa48jgaHKJPkdIrht8l8KzKjs5/hAjUNDxnHWR4wnO\nD7cM0Dcglf5/IktMFeh50fIbzBGkt+T2Pc+Np4rUNdL4Nm5aaxSCmw+Rxz2NnutN\n0uyOyhAfsuStrIzXIYyp4eWprQKBgQDJ9v0eglIx8pHRg8afeGoLLKny/9uxmZMI\nVExHdyKSa07qKbuT0/Z0XD0BLiRqico5PKtaXiPY7nuRtn2U40rfZ4Y1Qwf0SCl1\nOmx6cQN/4WJG7WYCh7EL0qvdUOHMDE5Vw9Q+o84tdx0d/hQ5t8YfGU7aatbN4o+4\n0C3Pvbe3YQKBgQCRIEs9Dz7uUx7839Yb5FlvYYd3suC9uMw4eh3WEqcfWMQdGfd5\ngty7kTkGtMAjWDnqg7BAqNI46MPaCUu06DVfk7aTGWphSXHf3IENjh6m+6X6XUBL\nYZ/zlfI5GZV576rxOp5ud2xgW8D1eQobVLg3O29qcDVXx1sW9kHIGt3GhQKBgQCH\n+TTjRIRIQnLwJxMjrHNgwJpPEvl7cdTvB6ovd0McZwjDWIOEfHFyV+Nulv1HiStQ\nK8uF1Nm3pKAnM0ELa5euH0nZNB731VmsJkCAkvPzNe/vpsdGLssBFb5GC71pnmNj\nFKwh3DDkpUxCNByz20mVCHnxTXr/NGjk2avuMGGvIQKBgQCvBJMR1X0l9qAoIHOi\nRomzqn7lEttohqkV9eScblD3I6V+Ul7qEkvs+5iPtgRmHMenXjWIMYBjBjGEoHUn\nKlygkyOl6gny/pQ4Y93M4HXnhpmqJEYTz870++xTus/0fExSMk5fYOjA+9WhmOff\nkXF6LZc8oLEyYg9DT7uVk0eJXw==\n-----END PRIVATE KEY-----\n'
 };
-let lastSyncStatus = { status: 'pending', message: 'Aguardando primeira sincronização...', time: '' };
+let lastSyncStatus: { status: string; message: string; time: string; debug?: string } = { status: 'pending', message: 'Aguardando primeira sincronização...', time: '' };
 
 let packSizes = {
   lencolCasal: 25,
@@ -52,22 +56,33 @@ setTimeout(() => {
   setInterval(syncFromSheets, 30000);
 }, 2000);
 
+let deletedRooms: string[] = [];
+try {
+  if (fs.existsSync('deleted_rooms.json')) {
+    deletedRooms = JSON.parse(fs.readFileSync('deleted_rooms.json', 'utf-8'));
+  }
+} catch (e) {
+  console.error('Error reading deleted_rooms.json', e);
+}
+
 // Initialize rooms
 [200, 300, 400, 500, 600, 700].forEach(floor => {
   for (let i = 0; i <= 34; i++) {
     const id = `${floor + i}`;
-    rooms[id] = {
-      id,
-      floor,
-      status: 'vago', // vago, ocupado, interditado, chegada, saida
-      condition: 'limpo', // sujo, limpo, vestir
-      pax: 0,
-      arrivalDate: '',
-      departureDate: '',
-      dnd: false,
-      arrumacao: false,
-      trocaEnxoval: false
-    };
+    if (!deletedRooms.includes(id)) {
+      rooms[id] = {
+        id,
+        floor,
+        status: 'vago', // vago, ocupado, interditado, chegada, saida
+        condition: 'limpo', // sujo, limpo, vestir
+        pax: 0,
+        arrivalDate: '',
+        departureDate: '',
+        dnd: false,
+        arrumacao: false,
+        trocaEnxoval: false
+      };
+    }
   }
 });
 
@@ -245,7 +260,9 @@ io.on('connection', (socket) => {
       orders,
       users: Object.values(users),
       packSizes,
-      requestableItems
+      requestableItems,
+      swapRequests,
+      maintenanceRequests
     });
     socket.emit('sync_status', lastSyncStatus);
   });
@@ -259,9 +276,85 @@ io.on('connection', (socket) => {
     }
   });
 
+  socket.on('swap_rooms', async (data) => {
+    const { oldRoomId, newRoomId } = data;
+    if (rooms[oldRoomId] && rooms[newRoomId]) {
+      rooms[oldRoomId].status = 'vago';
+      rooms[newRoomId].status = 'chegada';
+      io.emit('room_updated', rooms[oldRoomId]);
+      io.emit('room_updated', rooms[newRoomId]);
+      await syncToSheets();
+    }
+  });
+
+  socket.on('request_swap', (data) => {
+    const req = { id: Date.now().toString(), ...data, status: 'pending', createdAt: new Date().toISOString() };
+    swapRequests.push(req);
+    io.emit('swap_request_created', req);
+  });
+
+  socket.on('approve_swap', async (id) => {
+    const req = swapRequests.find(r => r.id === id);
+    if (req && req.status === 'pending') {
+      req.status = 'approved';
+      if (rooms[req.oldRoomId] && rooms[req.newRoomId]) {
+        rooms[req.oldRoomId].status = 'vago';
+        rooms[req.newRoomId].status = 'chegada';
+        io.emit('room_updated', rooms[req.oldRoomId]);
+        io.emit('room_updated', rooms[req.newRoomId]);
+        await syncToSheets();
+      }
+      io.emit('swap_request_updated', req);
+
+      // Reject any other pending requests involving these rooms
+      swapRequests.forEach(otherReq => {
+        if (otherReq.status === 'pending' && otherReq.id !== id) {
+          if (otherReq.oldRoomId === req.oldRoomId || otherReq.newRoomId === req.newRoomId || otherReq.newRoomId === req.oldRoomId || otherReq.oldRoomId === req.newRoomId) {
+            otherReq.status = 'rejected';
+            io.emit('swap_request_updated', otherReq);
+          }
+        }
+      });
+    }
+  });
+
+  socket.on('reject_swap', (id) => {
+    const req = swapRequests.find(r => r.id === id);
+    if (req) {
+      req.status = 'rejected';
+      io.emit('swap_request_updated', req);
+    }
+  });
+
+  socket.on('create_maintenance', async (data) => {
+    const req = { id: Date.now().toString(), ...data, status: 'pendente', createdAt: new Date().toISOString() };
+    maintenanceRequests.push(req);
+    io.emit('maintenance_created', req);
+    await syncMaintenanceToSheets();
+  });
+
+  socket.on('resolve_maintenance', async (data) => {
+    const { id, status, reason } = data;
+    const req = maintenanceRequests.find(r => r.id === id);
+    if (req) {
+      req.status = status;
+      if (reason) req.resolutionReason = reason;
+      io.emit('maintenance_updated', req);
+      await syncMaintenanceToSheets();
+    }
+  });
+
   socket.on('delete_room', async (id) => {
     if (rooms[id]) {
       delete rooms[id];
+      if (!deletedRooms.includes(id)) {
+        deletedRooms.push(id);
+        try {
+          fs.writeFileSync('deleted_rooms.json', JSON.stringify(deletedRooms, null, 2));
+        } catch (e) {
+          console.error('Error writing deleted_rooms.json', e);
+        }
+      }
       io.emit('room_deleted', id);
       await syncToSheets();
     }
@@ -317,6 +410,18 @@ io.on('connection', (socket) => {
 });
 
 // Google Sheets Sync Logic
+async function getDriveClient() {
+  if (!sheetsConfig || !sheetsConfig.clientEmail || !sheetsConfig.privateKey) {
+    return null;
+  }
+  const auth = new google.auth.JWT({
+    email: sheetsConfig.clientEmail,
+    key: sheetsConfig.privateKey.replace(/\\n/g, '\n'),
+    scopes: ['https://www.googleapis.com/auth/drive']
+  });
+  return google.drive({ version: 'v3', auth });
+}
+
 async function getSheetsClient() {
   if (!sheetsConfig || !sheetsConfig.clientEmail || !sheetsConfig.privateKey || !sheetsConfig.spreadsheetId) {
     return null;
@@ -609,7 +714,7 @@ async function syncFromSheets() {
       debug: debugLogs.join(' | ')
     };
     io.emit('sync_status', lastSyncStatus);
-    io.emit('initial_data', { rooms: Object.values(rooms), orders, users: Object.values(users), packSizes, requestableItems });
+    io.emit('initial_data', { rooms: Object.values(rooms), orders, users: Object.values(users), packSizes, requestableItems, swapRequests, maintenanceRequests });
   } catch (error: any) {
     console.error('Error syncing from sheets:', error);
     lastSyncStatus = { 
@@ -620,6 +725,174 @@ async function syncFromSheets() {
     io.emit('sync_status', lastSyncStatus);
   }
 }
+
+async function ensureMaintenanceSheetExists(sheets: any) {
+  try {
+    const response = await sheets.spreadsheets.get({
+      spreadsheetId: sheetsConfig.spreadsheetId,
+    });
+    const sheetsList = response.data.sheets || [];
+    const hasSheet = sheetsList.some((s: any) => s.properties.title === 'MANUTENCOES');
+
+    if (!hasSheet) {
+      await sheets.spreadsheets.batchUpdate({
+        spreadsheetId: sheetsConfig.spreadsheetId,
+        requestBody: {
+          requests: [
+            {
+              addSheet: {
+                properties: {
+                  title: 'MANUTENCOES',
+                }
+              }
+            }
+          ]
+        }
+      });
+      
+      // Add headers
+      await sheets.spreadsheets.values.update({
+        spreadsheetId: sheetsConfig.spreadsheetId,
+        range: 'MANUTENCOES!A1:H1',
+        valueInputOption: 'USER_ENTERED',
+        requestBody: {
+          values: [['ID', 'Quarto', 'Descrição', 'Status', 'Motivo Resolução', 'Foto', 'Criado Por', 'Data Criação']]
+        }
+      });
+    }
+  } catch (error) {
+    console.error('Error ensuring MANUTENCOES sheet exists:', error);
+  }
+}
+
+async function syncMaintenanceToSheets() {
+  const sheets = await getSheetsClient();
+  if (!sheets) return;
+
+  await ensureMaintenanceSheetExists(sheets);
+
+  try {
+    const values = maintenanceRequests.map((req: any) => {
+      let photoCell = '';
+      if (req.photoUrl) {
+        photoCell = `=IMAGE("${req.photoUrl}")`; // Direct links and uc?id= work with =IMAGE()
+      }
+      return [
+        req.id,
+        req.roomId,
+        req.description,
+        req.status,
+        req.resolutionReason || '',
+        photoCell,
+        req.createdBy,
+        req.createdAt
+      ];
+    });
+
+    await sheets.spreadsheets.values.clear({
+      spreadsheetId: sheetsConfig.spreadsheetId,
+      range: 'MANUTENCOES!A2:H',
+    });
+
+    if (values.length > 0) {
+      await sheets.spreadsheets.values.update({
+        spreadsheetId: sheetsConfig.spreadsheetId,
+        range: 'MANUTENCOES!A2:H',
+        valueInputOption: 'USER_ENTERED',
+        requestBody: { values }
+      });
+    }
+  } catch (error) {
+    console.error('Error syncing maintenance to sheets:', error);
+  }
+}
+
+app.post('/api/upload', async (req, res) => {
+  try {
+    const { imageBase64, filename } = req.body;
+    const drive = await getDriveClient();
+    
+    if (!imageBase64 || !drive) {
+      return res.status(400).json({ error: 'No image provided or Drive not configured' });
+    }
+    
+    const buffer = Buffer.from(imageBase64.replace(/^data:image\/\w+;base64,/, ""), 'base64');
+    const mimeType = imageBase64.match(/^data:(image\/\w+);base64,/)?.[1] || 'image/jpeg';
+
+    let parentFolderId: string | undefined = '1jHSbN18QXKL1OPl8_QiSsHYT0NiqgNNW'; // User provided folder ID
+    
+    const fileMetadata: any = { 
+      name: filename,
+      parents: [parentFolderId]
+    };
+
+    const media = { 
+      mimeType, 
+      body: Readable.from(buffer) 
+    };
+    
+    let driveRes;
+    let fileId;
+    let finalUrl;
+    let usedFallback = false;
+
+    try {
+      driveRes = await drive.files.create({
+        requestBody: fileMetadata,
+        media: media,
+        fields: 'id, webViewLink, webContentLink',
+        supportsAllDrives: true
+      });
+      
+      fileId = driveRes.data.id;
+      await drive.permissions.create({
+        fileId: fileId!,
+        requestBody: { role: 'reader', type: 'anyone' }
+      });
+      
+      // Use uc?id= format for direct image rendering in <img> tags
+      finalUrl = `https://drive.google.com/uc?id=${fileId}`;
+      
+    } catch (createErr: any) {
+      if (createErr.message && createErr.message.includes('storage quota')) {
+        console.log('Aviso (Google Drive): A conta de serviço não tem espaço para salvar na pasta comum.');
+        console.log('Redirecionando o salvamento da foto para o servidor alternativo (Catbox)...');
+      } else {
+        console.error('Drive create error:', createErr.message || createErr);
+        console.log('Falling back to catbox.moe due to Drive error...');
+      }
+      
+      try {
+        const blob = new Blob([buffer], { type: mimeType });
+        const formData = new FormData();
+        formData.append('reqtype', 'fileupload');
+        formData.append('fileToUpload', blob, filename);
+
+        const catboxRes = await fetch('https://catbox.moe/user/api.php', {
+          method: 'POST',
+          body: formData,
+        });
+
+        if (!catboxRes.ok) {
+          throw new Error(`Catbox API responded with status ${catboxRes.status}`);
+        }
+
+        finalUrl = await catboxRes.text();
+        usedFallback = true;
+      } catch (fallbackErr: any) {
+        console.error('Catbox fallback error:', fallbackErr.message || fallbackErr);
+        return res.status(500).json({ 
+          error: 'Erro ao salvar a foto. O Google Drive bloqueou por falta de espaço e o servidor alternativo também falhou.' 
+        });
+      }
+    }
+    
+    res.json({ url: finalUrl, id: fileId, usedFallback });
+  } catch (e: any) {
+    console.error('Upload error:', e.message || e);
+    res.status(500).json({ error: 'Upload failed' });
+  }
+});
 
 async function startServer() {
   if (process.env.NODE_ENV !== 'production') {

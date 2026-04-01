@@ -1,13 +1,14 @@
-import React, { useState } from 'react';
+import React, { useState, useRef } from 'react';
 import { useSocket } from '../SocketContext';
-import { BedDouble, Sparkles, Trash2, User, Calendar, BellOff, CheckCircle2, ArrowLeft, Layers, Check, Filter } from 'lucide-react';
+import { BedDouble, Sparkles, Trash2, User, Calendar, BellOff, CheckCircle2, ArrowLeft, Layers, Check, Filter, ArrowRightLeft, Search, Camera, X } from 'lucide-react';
 import clsx from 'clsx';
 
 export default function ApartamentosTab({ user }: { user: any }) {
-  const { rooms, updateRoom, createOrder } = useSocket();
+  const { rooms, updateRoom, createOrder, requestSwap, createMaintenance, swapRooms, swapRequests } = useSocket();
   const [selectedFloor, setSelectedFloor] = useState<number | null>(null);
   const [selectedRoom, setSelectedRoom] = useState<any | null>(null);
   const [showArrumacaoModal, setShowArrumacaoModal] = useState(false);
+  const [showSwapModal, setShowSwapModal] = useState(false);
   const [filter, setFilter] = useState<'todos' | 'ocupado' | 'limpo' | 'sujo' | 'saida' | 'vestir' | 'chegada'>('todos');
   const [showFilterMenu, setShowFilterMenu] = useState(false);
 
@@ -15,7 +16,7 @@ export default function ApartamentosTab({ user }: { user: any }) {
   const allowedFloors = user.role === 'gestor' ? floors : user.floors || [];
 
   if (allowedFloors.length === 0) {
-    return <div className="p-4 text-center text-gray-500">Nenhum andar atribuído a você.</div>;
+    return <div className="p-4 text-center text-gray-500 dark:text-gray-400">Nenhum andar atribuído a você.</div>;
   }
 
   const handleOpenArrumacao = (room: any) => {
@@ -24,10 +25,10 @@ export default function ApartamentosTab({ user }: { user: any }) {
   };
 
   return (
-    <div className="flex flex-col h-full relative">
+    <div className="flex flex-col relative">
       {selectedFloor === null ? (
         <div className="space-y-4">
-          <h2 className="text-xl font-bold text-gray-800">Selecione um Andar</h2>
+          <h2 className="text-xl font-bold text-gray-800 dark:text-gray-100">Selecione um Andar</h2>
           <div className="grid grid-cols-2 gap-4 sm:grid-cols-3">
             {allowedFloors.map(floor => {
               const floorRooms = rooms.filter(r => r.floor === floor);
@@ -37,15 +38,15 @@ export default function ApartamentosTab({ user }: { user: any }) {
                 <button
                   key={floor}
                   onClick={() => setSelectedFloor(floor)}
-                  className="flex flex-col items-center justify-center rounded-2xl border border-blue-100 bg-white p-6 shadow-sm transition-all hover:bg-blue-50 hover:shadow-md active:scale-95"
+                  className="flex flex-col items-center justify-center rounded-2xl border border-blue-100 dark:border-blue-900/50 bg-white dark:bg-gray-800 p-6 shadow-sm transition-all hover:bg-blue-50 dark:bg-blue-900/30 hover:shadow-md active:scale-95"
                 >
-                  <div className="mb-3 flex h-12 w-12 items-center justify-center rounded-full bg-blue-100 text-blue-600">
+                  <div className="mb-3 flex h-12 w-12 items-center justify-center rounded-full bg-blue-100 dark:bg-blue-900/50 text-blue-600 dark:text-blue-400">
                     <Layers size={24} />
                   </div>
-                  <span className="text-lg font-bold text-gray-800">Andar {floor}</span>
-                  <span className="mt-1 text-xs font-medium text-gray-500">{floorRooms.length} Quartos</span>
+                  <span className="text-lg font-bold text-gray-800 dark:text-gray-100">Andar {floor}</span>
+                  <span className="mt-1 text-xs font-medium text-gray-500 dark:text-gray-400">{floorRooms.length} Quartos</span>
                   {dirtyRooms > 0 && (
-                    <span className="mt-2 rounded-full bg-red-100 px-2 py-0.5 text-[10px] font-bold text-red-600">
+                    <span className="mt-2 rounded-full bg-red-100 dark:bg-red-900/50 px-2 py-0.5 text-[10px] font-bold text-red-600 dark:text-red-400">
                       {dirtyRooms} Sujos
                     </span>
                   )}
@@ -56,25 +57,32 @@ export default function ApartamentosTab({ user }: { user: any }) {
         </div>
       ) : (
         <div className="flex flex-col space-y-4">
-          <div className="sticky top-0 z-10 -mx-4 px-4 py-2 bg-gray-50/90 backdrop-blur-md border-b border-gray-200 flex items-center justify-between">
-            <div className="flex items-center gap-2">
+          <div className="sticky top-0 z-10 -mx-4 px-4 py-2 bg-gray-50 dark:bg-gray-900/90 backdrop-blur-md border-b border-gray-200 dark:border-gray-700 flex flex-wrap items-center justify-between gap-y-2">
+            <div className="flex flex-wrap items-center gap-2">
               <button
                 onClick={() => {
                   setSelectedFloor(null);
                   setFilter('todos');
                   setShowFilterMenu(false);
                 }}
-                className="flex items-center gap-2 rounded-lg bg-white px-3 py-2 text-sm font-medium text-gray-600 shadow-sm border border-gray-200 hover:bg-gray-50 hover:text-gray-900 transition-colors"
+                className="flex items-center gap-1.5 rounded-lg bg-white dark:bg-gray-800 px-2.5 py-1.5 text-xs sm:text-sm font-medium text-gray-600 dark:text-gray-300 shadow-sm border border-gray-200 dark:border-gray-700 hover:bg-gray-50 dark:bg-gray-900 hover:text-gray-900 dark:text-gray-50 transition-colors"
               >
                 <ArrowLeft size={16} /> Voltar
+              </button>
+              
+              <button
+                onClick={() => setShowSwapModal(true)}
+                className="flex items-center gap-1.5 rounded-lg bg-white dark:bg-gray-800 px-2.5 py-1.5 text-xs sm:text-sm font-medium text-gray-600 dark:text-gray-300 shadow-sm border border-gray-200 dark:border-gray-700 hover:bg-gray-50 dark:bg-gray-900 hover:text-gray-900 dark:text-gray-50 transition-colors"
+              >
+                <ArrowRightLeft size={16} /> <span className="hidden sm:inline">Trocar Chegada</span>
               </button>
               
               <div className="relative">
                 <button
                   onClick={() => setShowFilterMenu(!showFilterMenu)}
                   className={clsx(
-                    "flex items-center gap-2 rounded-lg px-3 py-2 text-sm font-medium shadow-sm border transition-colors",
-                    filter !== 'todos' ? "bg-blue-50 border-blue-200 text-blue-700" : "bg-white border-gray-200 text-gray-600 hover:bg-gray-50 hover:text-gray-900"
+                    "flex items-center gap-1.5 rounded-lg px-2.5 py-1.5 text-xs sm:text-sm font-medium shadow-sm border transition-colors",
+                    filter !== 'todos' ? "bg-blue-50 dark:bg-blue-900/30 border-blue-200 dark:border-blue-800/50 text-blue-700 dark:text-blue-300" : "bg-white dark:bg-gray-800 border-gray-200 dark:border-gray-700 text-gray-600 dark:text-gray-300 hover:bg-gray-50 dark:bg-gray-900 hover:text-gray-900 dark:text-gray-50"
                   )}
                 >
                   <Filter size={16} />
@@ -82,7 +90,7 @@ export default function ApartamentosTab({ user }: { user: any }) {
                 </button>
                 
                 {showFilterMenu && (
-                  <div className="absolute left-0 top-full mt-2 w-48 rounded-xl border border-gray-200 bg-white p-2 shadow-lg">
+                  <div className="absolute left-0 top-full mt-2 w-48 rounded-xl border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800 p-2 shadow-lg">
                     <FilterOption label="Todos" value="todos" current={filter} onSelect={(v) => { setFilter(v as any); setShowFilterMenu(false); }} />
                     <FilterOption label="Ocupados" value="ocupado" current={filter} onSelect={(v) => { setFilter(v as any); setShowFilterMenu(false); }} />
                     <FilterOption label="Chegadas" value="chegada" current={filter} onSelect={(v) => { setFilter(v as any); setShowFilterMenu(false); }} />
@@ -94,10 +102,10 @@ export default function ApartamentosTab({ user }: { user: any }) {
                 )}
               </div>
             </div>
-            <h2 className="text-lg font-bold text-gray-800">Andar {selectedFloor}</h2>
+            <h2 className="text-base sm:text-lg font-bold text-gray-800 dark:text-gray-100">Andar {selectedFloor}</h2>
           </div>
           
-          <div className="grid grid-cols-2 gap-3 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 pt-2">
+          <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-3 pt-2">
             {rooms
               .filter(r => r.floor === selectedFloor)
               .filter(r => {
@@ -134,6 +142,23 @@ export default function ApartamentosTab({ user }: { user: any }) {
           }}
         />
       )}
+
+      {/* Swap Modal */}
+      {showSwapModal && (
+        <SwapModal
+          rooms={rooms}
+          allowedFloors={allowedFloors}
+          user={user}
+          swapRequests={swapRequests}
+          onClose={() => setShowSwapModal(false)}
+          onRequestSwap={(oldId, newId, reason, isMaintenance, photoUrl) => {
+            requestSwap(oldId, newId, reason, user.email);
+            if (isMaintenance) {
+              createMaintenance(oldId, `Manutenção solicitada via troca de chegada: ${reason}`, photoUrl, user.email);
+            }
+          }}
+        />
+      )}
     </div>
   );
 }
@@ -142,19 +167,19 @@ function RoomCard({ room, onUpdate, onOpenArrumacao }: { key?: React.Key; room: 
   const [showConditionMenu, setShowConditionMenu] = useState(false);
 
   const bgColors = {
-    vago: 'bg-white border-gray-200 text-gray-800',
-    interditado: 'bg-yellow-50 border-yellow-200 text-yellow-900',
-    saida: 'bg-red-50 border-red-200 text-red-900',
+    vago: 'bg-white dark:bg-gray-800 border-gray-200 dark:border-gray-700 text-gray-800 dark:text-gray-100',
+    interditado: 'bg-yellow-50 dark:bg-yellow-900/30 border-yellow-200 text-yellow-900',
+    saida: 'bg-red-50 dark:bg-red-900/30 border-red-200 text-red-900',
     chegada: 'bg-emerald-50 border-emerald-200 text-emerald-900',
-    ocupado: 'bg-blue-50 border-blue-200 text-blue-900',
+    ocupado: 'bg-blue-50 dark:bg-blue-900/30 border-blue-200 dark:border-blue-800/50 text-blue-900',
   };
 
   const badgeColors = {
-    vago: 'bg-gray-100 text-gray-600',
-    interditado: 'bg-yellow-200 text-yellow-800',
-    saida: 'bg-red-200 text-red-800',
+    vago: 'bg-gray-100 dark:bg-gray-800 text-gray-600 dark:text-gray-300',
+    interditado: 'bg-yellow-200 text-yellow-800 dark:text-yellow-200',
+    saida: 'bg-red-200 text-red-800 dark:text-red-200',
     chegada: 'bg-emerald-200 text-emerald-800',
-    ocupado: 'bg-blue-200 text-blue-800',
+    ocupado: 'bg-blue-200 text-blue-800 dark:text-blue-200',
   };
 
   const isSecondNightOrMore = () => {
@@ -184,9 +209,9 @@ function RoomCard({ room, onUpdate, onOpenArrumacao }: { key?: React.Key; room: 
         <div className="mt-2">
           <button 
             onClick={() => onUpdate({ dnd: false })}
-            className="flex w-full items-center justify-center gap-1.5 rounded-lg bg-red-50 py-2 text-xs font-bold text-red-600 hover:bg-red-100 border border-red-100 transition-colors"
+            className="flex w-full items-center justify-center gap-1.5 rounded-lg bg-red-50 dark:bg-red-900/30 py-2 px-1 text-[11px] sm:text-xs font-bold text-red-600 dark:text-red-400 hover:bg-red-100 dark:bg-red-900/50 border border-red-100 transition-colors text-center"
           >
-            <BellOff size={14} /> Remover Não Perturbe
+            <BellOff size={14} className="flex-shrink-0" /> Remover Não Perturbe
           </button>
         </div>
       );
@@ -202,37 +227,37 @@ function RoomCard({ room, onUpdate, onOpenArrumacao }: { key?: React.Key; room: 
               }
             }}
             className={clsx(
-              'flex w-full items-center justify-center gap-2 rounded-lg py-2 transition-colors border',
+              'flex w-full items-center justify-center gap-1.5 rounded-lg py-2 px-1 transition-colors border text-center',
               room.arrumacao 
-                ? 'bg-green-50 border-green-200 text-green-700' 
-                : 'bg-white border-gray-200 text-gray-700 hover:bg-gray-50'
+                ? 'bg-green-50 dark:bg-green-900/30 border-green-200 text-green-700 dark:text-green-300' 
+                : 'bg-white dark:bg-gray-800 border-gray-200 dark:border-gray-700 text-gray-700 dark:text-gray-200 hover:bg-gray-50 dark:bg-gray-900'
             )}
           >
-            {room.arrumacao ? <CheckCircle2 size={16} /> : <Sparkles size={16} />}
-            <span className="text-xs font-semibold">{room.arrumacao ? 'Arrumado' : 'Arrumação'}</span>
+            {room.arrumacao ? <CheckCircle2 size={14} className="flex-shrink-0" /> : <Sparkles size={14} className="flex-shrink-0" />}
+            <span className="text-[11px] sm:text-xs font-semibold whitespace-normal leading-tight">{room.arrumacao ? 'Arrumado' : 'Arrumação'}</span>
           </button>
           
           {isSecondNightOrMore() && (
             <button
               onClick={() => onUpdate({ trocaEnxoval: !room.trocaEnxoval })}
               className={clsx(
-                'flex w-full items-center justify-center gap-2 rounded-lg py-2 transition-colors border',
+                'flex w-full items-center justify-center gap-1.5 rounded-lg py-2 px-1 transition-colors border text-center',
                 room.trocaEnxoval 
-                  ? 'bg-green-50 border-green-200 text-green-700' 
-                  : 'bg-white border-gray-200 text-gray-700 hover:bg-gray-50'
+                  ? 'bg-green-50 dark:bg-green-900/30 border-green-200 text-green-700 dark:text-green-300' 
+                  : 'bg-white dark:bg-gray-800 border-gray-200 dark:border-gray-700 text-gray-700 dark:text-gray-200 hover:bg-gray-50 dark:bg-gray-900'
               )}
             >
-              {room.trocaEnxoval ? <CheckCircle2 size={16} /> : <BedDouble size={16} />}
-              <span className="text-xs font-semibold">{room.trocaEnxoval ? 'Enxoval Trocado' : 'Troca de Enxoval'}</span>
+              {room.trocaEnxoval ? <CheckCircle2 size={14} className="flex-shrink-0" /> : <BedDouble size={14} className="flex-shrink-0" />}
+              <span className="text-[11px] sm:text-xs font-semibold whitespace-normal leading-tight">{room.trocaEnxoval ? 'Enxoval Trocado' : 'Troca de Enxoval'}</span>
             </button>
           )}
           
           {!room.arrumacao && (
             <button 
               onClick={() => onUpdate({ dnd: true })}
-              className="flex w-full items-center justify-center gap-1.5 rounded-lg bg-gray-50 py-1.5 text-xs font-medium text-gray-600 hover:bg-gray-100 border border-gray-200 transition-colors"
+              className="flex w-full items-center justify-center gap-1.5 rounded-lg bg-gray-50 dark:bg-gray-900 py-1.5 px-1 text-[11px] sm:text-xs font-medium text-gray-600 dark:text-gray-300 hover:bg-gray-100 dark:bg-gray-800 border border-gray-200 dark:border-gray-700 transition-colors text-center"
             >
-              <BellOff size={12} /> Ativar Não Perturbe
+              <BellOff size={12} className="flex-shrink-0" /> Ativar Não Perturbe
             </button>
           )}
         </div>
@@ -241,8 +266,8 @@ function RoomCard({ room, onUpdate, onOpenArrumacao }: { key?: React.Key; room: 
   } else if (room.status === 'vago' || room.status === 'chegada') {
     const conditionColors = {
       sujo: 'bg-red-800 text-white hover:bg-red-700 border-red-900',
-      limpo: 'bg-green-600 text-white hover:bg-green-500 border-green-700',
-      vestir: 'bg-blue-600 text-white hover:bg-blue-500 border-blue-700'
+      limpo: 'bg-green-600 text-white hover:bg-green-50 dark:bg-green-900/300 border-green-700',
+      vestir: 'bg-blue-600 text-white hover:bg-blue-50 dark:bg-blue-900/300 border-blue-700'
     };
     
     const conditionIcons = {
@@ -264,34 +289,34 @@ function RoomCard({ room, onUpdate, onOpenArrumacao }: { key?: React.Key; room: 
         <button
           onClick={() => setShowConditionMenu(!showConditionMenu)}
           className={clsx(
-            'flex w-full items-center justify-center gap-2 rounded-lg py-2 text-xs font-bold transition-colors shadow-sm border',
+            'flex w-full items-center justify-center gap-1.5 rounded-lg py-2 px-1 text-[11px] sm:text-xs font-bold transition-colors shadow-sm border text-center',
             conditionColors[currentCondition as keyof typeof conditionColors] || conditionColors.sujo
           )}
         >
-          {conditionIcons[currentCondition as keyof typeof conditionIcons]}
-          <span className="uppercase tracking-wider">{conditionLabels[currentCondition as keyof typeof conditionLabels]}</span>
+          <div className="flex-shrink-0">{conditionIcons[currentCondition as keyof typeof conditionIcons]}</div>
+          <span className="uppercase tracking-wider whitespace-normal leading-tight">{conditionLabels[currentCondition as keyof typeof conditionLabels]}</span>
         </button>
 
         {showConditionMenu && (
           <>
             <div className="fixed inset-0 z-10" onClick={() => setShowConditionMenu(false)} />
-            <div className="absolute bottom-full left-0 mb-2 w-full rounded-xl border border-gray-200 bg-white p-2 shadow-xl z-20">
+            <div className="absolute bottom-full left-0 mb-2 w-full rounded-xl border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800 p-2 shadow-xl z-20">
               <div className="flex flex-col gap-1">
                 <button
                   onClick={() => { onUpdate({ condition: 'sujo' }); setShowConditionMenu(false); }}
-                  className="flex items-center gap-2 rounded-lg px-3 py-2 text-sm font-bold text-red-700 hover:bg-red-50"
+                  className="flex items-center gap-2 rounded-lg px-3 py-2 text-sm font-bold text-red-700 dark:text-red-300 hover:bg-red-50 dark:bg-red-900/30"
                 >
                   <Trash2 size={16} /> Sujo
                 </button>
                 <button
                   onClick={() => { onUpdate({ condition: 'vestir' }); setShowConditionMenu(false); }}
-                  className="flex items-center gap-2 rounded-lg px-3 py-2 text-sm font-bold text-blue-700 hover:bg-blue-50"
+                  className="flex items-center gap-2 rounded-lg px-3 py-2 text-sm font-bold text-blue-700 dark:text-blue-300 hover:bg-blue-50 dark:bg-blue-900/30"
                 >
                   <BedDouble size={16} /> Vestir
                 </button>
                 <button
                   onClick={() => { onUpdate({ condition: 'limpo' }); setShowConditionMenu(false); }}
-                  className="flex items-center gap-2 rounded-lg px-3 py-2 text-sm font-bold text-green-700 hover:bg-green-50"
+                  className="flex items-center gap-2 rounded-lg px-3 py-2 text-sm font-bold text-green-700 dark:text-green-300 hover:bg-green-50 dark:bg-green-900/30"
                 >
                   <Sparkles size={16} /> Limpo
                 </button>
@@ -303,13 +328,13 @@ function RoomCard({ room, onUpdate, onOpenArrumacao }: { key?: React.Key; room: 
     );
   } else if (room.status === 'saida') {
     controls = (
-      <div className="mt-2 flex justify-center rounded-lg bg-red-50 p-2.5 text-xs font-bold text-red-700 text-center border border-red-100">
+      <div className="mt-2 flex justify-center rounded-lg bg-red-50 dark:bg-red-900/30 p-2.5 text-xs font-bold text-red-700 dark:text-red-300 text-center border border-red-100">
         Check-out
       </div>
     );
   } else if (room.status === 'interditado') {
     controls = (
-      <div className="mt-2 flex justify-center rounded-lg bg-yellow-50 p-2.5 text-xs font-medium text-yellow-800 text-center border border-yellow-100">
+      <div className="mt-2 flex justify-center rounded-lg bg-yellow-50 dark:bg-yellow-900/30 p-2.5 text-xs font-medium text-yellow-800 dark:text-yellow-200 text-center border border-yellow-100">
         Interditado / Manutenção
       </div>
     );
@@ -318,10 +343,10 @@ function RoomCard({ room, onUpdate, onOpenArrumacao }: { key?: React.Key; room: 
   return (
     <div className={clsx('relative flex flex-col justify-between rounded-xl border p-3 shadow-sm transition-all', bgColors[room.status as keyof typeof bgColors])}>
       {/* Header */}
-      <div className="flex items-start justify-between">
+      <div className="flex items-start justify-between gap-2">
         <span className="text-2xl font-bold tracking-tight">{room.id}</span>
-        <div className="flex flex-col items-end gap-1">
-          <span className={clsx('text-[10px] font-bold uppercase tracking-wider px-2 py-0.5 rounded-full', badgeColors[room.status as keyof typeof badgeColors])}>
+        <div className="flex flex-col items-end gap-1 flex-shrink-0">
+          <span className={clsx('text-[9px] sm:text-[10px] font-bold uppercase tracking-wider px-2 py-0.5 rounded-full text-center', badgeColors[room.status as keyof typeof badgeColors])}>
             {room.status}
           </span>
         </div>
@@ -353,7 +378,7 @@ function ConditionBtn({ active, icon, label, onClick }: { active: boolean; icon:
       onClick={onClick}
       className={clsx(
         'flex flex-1 flex-col items-center justify-center rounded-md py-1.5 transition-all',
-        active ? 'bg-white text-blue-600 shadow-sm border border-gray-200' : 'text-gray-500 hover:bg-white/50 hover:text-gray-700'
+        active ? 'bg-white dark:bg-gray-800 text-blue-600 dark:text-blue-400 shadow-sm border border-gray-200 dark:border-gray-700' : 'text-gray-500 dark:text-gray-400 hover:bg-white dark:bg-gray-800/50 hover:text-gray-700 dark:text-gray-200'
       )}
     >
       {icon}
@@ -369,7 +394,7 @@ function FilterOption({ label, value, current, onSelect }: { label: string; valu
       onClick={() => onSelect(value)}
       className={clsx(
         "flex w-full items-center justify-between rounded-lg px-3 py-2 text-sm transition-colors",
-        isSelected ? "bg-blue-50 font-bold text-blue-700" : "text-gray-700 hover:bg-gray-50"
+        isSelected ? "bg-blue-50 dark:bg-blue-900/30 font-bold text-blue-700 dark:text-blue-300" : "text-gray-700 dark:text-gray-200 hover:bg-gray-50 dark:bg-gray-900"
       )}
     >
       {label}
@@ -406,14 +431,14 @@ function ArrumacaoModal({ room, onClose, onSubmit }: { room: any; onClose: () =>
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4 backdrop-blur-sm">
-      <div className="w-full max-w-sm rounded-2xl bg-white p-6 shadow-xl">
-        <h3 className="mb-4 text-xl font-bold text-gray-800">Arrumação - Quarto {room.id}</h3>
+      <div className="w-full max-w-sm rounded-2xl bg-white dark:bg-gray-800 p-4 sm:p-6 shadow-xl max-h-[90vh] overflow-y-auto mx-auto">
+        <h3 className="mb-4 text-lg sm:text-xl font-bold text-gray-800 dark:text-gray-100">Arrumação - Quarto {room.id}</h3>
         
-        <div className="mb-4 rounded-lg bg-gray-50 p-4">
-          <label className="mb-2 block text-sm font-medium text-gray-700">Quais itens foram retirados do quarto?</label>
+        <div className="mb-4 rounded-lg bg-gray-50 dark:bg-gray-900 p-3 sm:p-4">
+          <label className="mb-2 block text-sm font-medium text-gray-700 dark:text-gray-200">Quais itens foram retirados do quarto?</label>
           <div className="flex gap-2">
             <select
-              className="flex-1 rounded-lg border border-gray-300 p-2 text-sm outline-none"
+              className="flex-1 rounded-lg border border-gray-300 dark:border-gray-600 p-2 text-sm outline-none"
               value={selectedItem}
               onChange={(e) => setSelectedItem(e.target.value)}
             >
@@ -422,20 +447,20 @@ function ArrumacaoModal({ room, onClose, onSubmit }: { room: any; onClose: () =>
             <input
               type="number"
               min="1"
-              className="w-20 rounded-lg border border-gray-300 p-2 text-center text-sm outline-none"
+              className="w-20 rounded-lg border border-gray-300 dark:border-gray-600 p-2 text-center text-sm outline-none"
               value={quantity}
               onChange={(e) => setQuantity(parseInt(e.target.value) || 1)}
             />
-            <button onClick={handleAdd} className="rounded-lg bg-blue-100 px-3 text-blue-600 font-bold hover:bg-blue-200">+</button>
+            <button onClick={handleAdd} className="rounded-lg bg-blue-100 dark:bg-blue-900/50 px-3 text-blue-600 dark:text-blue-400 font-bold hover:bg-blue-200">+</button>
           </div>
         </div>
 
         {items.length > 0 && (
           <div className="mb-6">
-            <h4 className="mb-2 text-sm font-semibold text-gray-600">Itens Retirados:</h4>
+            <h4 className="mb-2 text-sm font-semibold text-gray-600 dark:text-gray-300">Itens Retirados:</h4>
             <ul className="space-y-2">
               {items.map((i, idx) => (
-                <li key={idx} className="flex justify-between rounded-lg bg-gray-100 px-3 py-2 text-sm">
+                <li key={idx} className="flex justify-between rounded-lg bg-gray-100 dark:bg-gray-800 px-3 py-2 text-sm">
                   <span>{i.item}</span>
                   <span className="font-bold">{i.quantity}</span>
                 </li>
@@ -445,9 +470,225 @@ function ArrumacaoModal({ room, onClose, onSubmit }: { room: any; onClose: () =>
         )}
 
         <div className="flex gap-3">
-          <button onClick={onClose} className="flex-1 rounded-xl bg-gray-100 py-3 font-semibold text-gray-600 hover:bg-gray-200">Cancelar</button>
+          <button onClick={onClose} className="flex-1 rounded-xl bg-gray-100 dark:bg-gray-800 py-3 font-semibold text-gray-600 dark:text-gray-300 hover:bg-gray-200 dark:bg-gray-700">Cancelar</button>
           <button onClick={handleSubmit} className="flex-1 rounded-xl bg-blue-600 py-3 font-semibold text-white hover:bg-blue-700">Finalizar Arrumação</button>
         </div>
+      </div>
+    </div>
+  );
+}
+
+function SwapModal({ rooms, allowedFloors, user, swapRequests, onClose, onRequestSwap }: { rooms: any[], allowedFloors: number[], user: any, swapRequests: any[], onClose: () => void, onRequestSwap: (oldId: string, newId: string, reason: string, isMaintenance: boolean, photoUrl?: string) => void }) {
+  const [step, setStep] = useState<1 | 2 | 3>(1);
+  const [selectedOldRoom, setSelectedOldRoom] = useState<any | null>(null);
+  const [selectedNewRoom, setSelectedNewRoom] = useState<any | null>(null);
+  const [searchQuery, setSearchQuery] = useState('');
+  const [reason, setReason] = useState('');
+  const [isMaintenance, setIsMaintenance] = useState(false);
+  const [photoBase64, setPhotoBase64] = useState<string | null>(null);
+  const [isUploading, setIsUploading] = useState(false);
+  const fileInputRef = useRef<HTMLInputElement>(null);
+
+  const pendingSwapNewRoomIds = swapRequests.filter(req => req.status === 'pending').map(req => req.newRoomId);
+  const pendingSwapOldRoomIds = swapRequests.filter(req => req.status === 'pending').map(req => req.oldRoomId);
+  const chegadaRooms = rooms.filter(r => allowedFloors.includes(r.floor) && r.status === 'chegada' && !pendingSwapOldRoomIds.includes(r.id));
+  const vagoRooms = rooms.filter(r => allowedFloors.includes(r.floor) && r.status === 'vago' && r.id.toLowerCase().includes(searchQuery.toLowerCase()) && !pendingSwapNewRoomIds.includes(r.id));
+
+  const handlePhotoCapture = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (file) {
+      const reader = new FileReader();
+      reader.onloadend = () => {
+        setPhotoBase64(reader.result as string);
+      };
+      reader.readAsDataURL(file);
+    }
+  };
+
+  const handleSubmit = async () => {
+    let photoUrl = undefined;
+    if (isMaintenance && photoBase64) {
+      setIsUploading(true);
+      try {
+        const res = await fetch('/api/upload', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            'Authorization': `Bearer ${localStorage.getItem('token')}`
+          },
+          body: JSON.stringify({
+            imageBase64: photoBase64,
+            filename: `manutencao_troca_${selectedOldRoom?.id}_${Date.now()}.jpg`
+          })
+        });
+        const data = await res.json();
+        if (data.url) {
+          photoUrl = data.url;
+        }
+      } catch (error) {
+        console.error('Error uploading photo:', error);
+      }
+      setIsUploading(false);
+    }
+    onRequestSwap(selectedOldRoom.id, selectedNewRoom.id, reason, isMaintenance, photoUrl);
+    onClose();
+  };
+
+  return (
+    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4 backdrop-blur-sm">
+      <div className="w-full max-w-md rounded-2xl bg-white dark:bg-gray-800 p-4 sm:p-6 shadow-xl flex flex-col max-h-[90vh] mx-auto">
+        <h3 className="mb-4 text-lg sm:text-xl font-bold text-gray-800 dark:text-gray-100">Trocar Chegada</h3>
+        
+        {step === 1 ? (
+          <>
+            <p className="mb-4 text-sm text-gray-600 dark:text-gray-300">Selecione a chegada que deseja trocar:</p>
+            <div className="flex-1 overflow-y-auto space-y-2">
+              {chegadaRooms.length === 0 ? (
+                <p className="text-sm text-gray-500 dark:text-gray-400 text-center py-4">Nenhuma chegada encontrada nos seus andares.</p>
+              ) : (
+                chegadaRooms.map(room => (
+                  <button
+                    key={room.id}
+                    onClick={() => { setSelectedOldRoom(room); setStep(2); }}
+                    className="w-full flex items-center justify-between rounded-xl border border-gray-200 dark:border-gray-700 p-3 hover:bg-emerald-50 hover:border-emerald-200 transition-colors"
+                  >
+                    <span className="font-bold text-lg">{room.id}</span>
+                    <span className="text-xs bg-emerald-100 text-emerald-800 px-2 py-1 rounded-full font-bold uppercase">Chegada</span>
+                  </button>
+                ))
+              )}
+            </div>
+          </>
+        ) : step === 2 ? (
+          <>
+            <div className="mb-4 flex items-center gap-2">
+              <button onClick={() => setStep(1)} className="p-1 rounded-lg hover:bg-gray-100 dark:bg-gray-800"><ArrowLeft size={20} /></button>
+              <p className="text-sm text-gray-600 dark:text-gray-300">
+                Trocando <span className="font-bold text-gray-900 dark:text-gray-50">{selectedOldRoom?.id}</span> por:
+              </p>
+            </div>
+            
+            <div className="mb-4 relative">
+              <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" size={18} />
+              <input
+                type="text"
+                placeholder="Pesquisar apartamento vago..."
+                value={searchQuery}
+                onChange={(e) => setSearchQuery(e.target.value)}
+                className="w-full pl-10 pr-4 py-2 rounded-xl border border-gray-300 dark:border-gray-600 focus:border-blue-500 focus:ring-2 focus:ring-blue-200 outline-none transition-all"
+              />
+            </div>
+            
+            <div className="flex-1 overflow-y-auto space-y-2">
+              {vagoRooms.length === 0 ? (
+                <p className="text-sm text-gray-500 dark:text-gray-400 text-center py-4">Nenhum apartamento vago encontrado.</p>
+              ) : (
+                vagoRooms.map(room => (
+                  <button
+                    key={room.id}
+                    onClick={() => {
+                      setSelectedNewRoom(room);
+                      setStep(3);
+                    }}
+                    className="w-full flex items-center justify-between rounded-xl border border-gray-200 dark:border-gray-700 p-3 hover:bg-blue-50 dark:bg-blue-900/30 hover:border-blue-200 dark:border-blue-800/50 transition-colors"
+                  >
+                    <span className="font-bold text-lg">{room.id}</span>
+                    <span className="text-xs bg-gray-100 dark:bg-gray-800 text-gray-600 dark:text-gray-300 px-2 py-1 rounded-full font-bold uppercase">Vago</span>
+                  </button>
+                ))
+              )}
+            </div>
+          </>
+        ) : (
+          <>
+            <div className="mb-4 flex items-center gap-2">
+              <button onClick={() => setStep(2)} className="p-1 rounded-lg hover:bg-gray-100 dark:bg-gray-800"><ArrowLeft size={20} /></button>
+              <p className="text-sm text-gray-600 dark:text-gray-300">
+                Confirmar troca do <span className="font-bold text-gray-900 dark:text-gray-50">{selectedOldRoom?.id}</span> pelo <span className="font-bold text-gray-900 dark:text-gray-50">{selectedNewRoom?.id}</span>
+              </p>
+            </div>
+            
+            <div className="space-y-4">
+              <div>
+                <label className="block text-sm font-medium text-gray-700 dark:text-gray-200 mb-1">Motivo da Troca (Opcional)</label>
+                <textarea
+                  value={reason}
+                  onChange={(e) => setReason(e.target.value)}
+                  placeholder="Ex: Quarto com mofo, ar condicionado quebrado..."
+                  className="w-full rounded-xl border border-gray-300 dark:border-gray-600 p-3 text-sm outline-none focus:border-blue-500 focus:ring-2 focus:ring-blue-200"
+                  rows={3}
+                />
+              </div>
+              
+              <label className="flex items-center gap-2 cursor-pointer p-3 rounded-xl border border-gray-200 dark:border-gray-700 hover:bg-gray-50 dark:bg-gray-900 transition-colors">
+                <input
+                  type="checkbox"
+                  checked={isMaintenance}
+                  onChange={(e) => setIsMaintenance(e.target.checked)}
+                  className="w-4 h-4 text-blue-600 dark:text-blue-400 rounded border-gray-300 dark:border-gray-600 focus:ring-blue-500"
+                />
+                <span className="text-sm font-medium text-gray-700 dark:text-gray-200">O motivo é um problema de manutenção? (Gerar pedido)</span>
+              </label>
+
+              {isMaintenance && (
+                <div className="pt-2">
+                  <label className="mb-1 block text-sm font-bold text-gray-700 dark:text-gray-200">Foto do Problema (Opcional)</label>
+                  {photoBase64 ? (
+                    <div className="relative rounded-lg overflow-hidden border border-gray-200 dark:border-gray-700">
+                      <img src={photoBase64} alt="Preview" className="w-full h-32 object-cover" />
+                      <button 
+                        onClick={() => setPhotoBase64(null)}
+                        className="absolute top-2 right-2 bg-black/50 text-white p-1 rounded-full hover:bg-black/70"
+                      >
+                        <X size={16} />
+                      </button>
+                    </div>
+                  ) : (
+                    <button 
+                      onClick={() => fileInputRef.current?.click()}
+                      className="w-full flex flex-col items-center justify-center gap-2 rounded-lg border-2 border-dashed border-gray-300 dark:border-gray-600 p-4 text-gray-500 dark:text-gray-400 hover:bg-gray-50 dark:bg-gray-900 hover:border-blue-400 hover:text-blue-500 transition-colors"
+                    >
+                      <Camera size={24} />
+                      <span className="text-sm font-medium">Tirar foto ou escolher da galeria</span>
+                    </button>
+                  )}
+                  <input 
+                    type="file" 
+                    accept="image/*"
+                    capture="environment"
+                    ref={fileInputRef}
+                    onChange={handlePhotoCapture}
+                    className="hidden" 
+                  />
+                </div>
+              )}
+            </div>
+            
+            <div className="mt-6 flex gap-3">
+              <button onClick={onClose} disabled={isUploading} className="flex-1 rounded-xl bg-gray-100 dark:bg-gray-800 py-3 font-semibold text-gray-600 dark:text-gray-300 hover:bg-gray-200 dark:bg-gray-700 disabled:opacity-50">Cancelar</button>
+              <button 
+                onClick={handleSubmit}
+                disabled={isUploading}
+                className="flex-1 rounded-xl bg-blue-600 py-3 font-semibold text-white hover:bg-blue-700 disabled:opacity-50 flex justify-center items-center gap-2"
+              >
+                {isUploading ? (
+                  <>
+                    <div className="h-5 w-5 animate-spin rounded-full border-2 border-white border-t-transparent"></div>
+                    Enviando...
+                  </>
+                ) : (
+                  'Sugerir Troca'
+                )}
+              </button>
+            </div>
+          </>
+        )}
+        
+        {step !== 3 && (
+          <div className="mt-6 pt-4 border-t border-gray-100 dark:border-gray-800">
+            <button onClick={onClose} className="w-full rounded-xl bg-gray-100 dark:bg-gray-800 py-3 font-semibold text-gray-600 dark:text-gray-300 hover:bg-gray-200 dark:bg-gray-700">Cancelar</button>
+          </div>
+        )}
       </div>
     </div>
   );

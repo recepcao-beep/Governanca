@@ -51,21 +51,21 @@ export default function AuthScreen({ onLogin }: { onLogin: (user: any) => void }
   };
 
   return (
-    <div className="flex min-h-screen flex-col items-center justify-center bg-gray-50 p-4">
-      <div className="w-full max-w-sm rounded-3xl bg-white p-8 shadow-xl">
+    <div className="flex min-h-screen flex-col items-center justify-center bg-gray-50 dark:bg-gray-900 p-4">
+      <div className="w-full max-w-sm rounded-3xl bg-white dark:bg-gray-800 p-8 shadow-xl">
         <div className="mb-8 text-center">
           <div className="mx-auto mb-4 flex h-16 w-16 items-center justify-center rounded-2xl bg-blue-600 text-white shadow-lg">
             <Building size={32} />
           </div>
-          <h1 className="text-2xl font-bold tracking-tight text-gray-900">Governança</h1>
-          <p className="text-sm text-gray-500">Vilage Inn</p>
+          <h1 className="text-2xl font-bold tracking-tight text-gray-900 dark:text-gray-50">Governança</h1>
+          <p className="text-sm text-gray-500 dark:text-gray-400">Vilage Inn</p>
         </div>
 
         {view === 'selection' && (
           <div className="space-y-4">
             <button
               onClick={handleGoogleLogin}
-              className="flex w-full items-center justify-center gap-3 rounded-2xl border border-gray-200 bg-white p-4 font-semibold text-gray-700 shadow-sm transition-all hover:bg-gray-50 active:scale-95"
+              className="flex w-full items-center justify-center gap-3 rounded-2xl border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800 p-4 font-semibold text-gray-700 dark:text-gray-200 shadow-sm transition-all hover:bg-gray-50 dark:bg-gray-900 active:scale-95"
             >
               <svg className="h-5 w-5" viewBox="0 0 24 24">
                 <path d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z" fill="#4285F4" />
@@ -90,16 +90,16 @@ export default function AuthScreen({ onLogin }: { onLogin: (user: any) => void }
             <button
               type="button"
               onClick={() => setView('selection')}
-              className="mb-4 flex items-center gap-2 text-sm font-medium text-gray-500 hover:text-gray-900"
+              className="mb-4 flex items-center gap-2 text-sm font-medium text-gray-500 dark:text-gray-400 hover:text-gray-900 dark:text-gray-50"
             >
               <ArrowLeft size={16} /> Voltar
             </button>
             <div>
-              <label className="mb-1 block text-sm font-medium text-gray-700">Senha de Acesso</label>
+              <label className="mb-1 block text-sm font-medium text-gray-700 dark:text-gray-200">Senha de Acesso</label>
               <input
                 type="password"
                 required
-                className="w-full rounded-xl border border-gray-300 p-4 outline-none focus:border-blue-500 focus:ring-2 focus:ring-blue-500/20"
+                className="w-full rounded-xl border border-gray-300 dark:border-gray-600 p-4 outline-none focus:border-blue-500 focus:ring-2 focus:ring-blue-500/20"
                 placeholder="****"
                 value={password}
                 onChange={(e) => setPassword(e.target.value)}

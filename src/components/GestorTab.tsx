@@ -31,24 +31,24 @@ export default function GestorTab() {
 
   return (
     <div className="space-y-6">
-      <div className="rounded-xl border border-yellow-200 bg-yellow-50 p-6">
-        <h2 className="mb-4 flex items-center gap-2 text-xl font-bold text-yellow-900">
+      <div className="rounded-xl border border-yellow-200 bg-yellow-50 dark:bg-yellow-900/30 p-4 sm:p-6">
+        <h2 className="mb-4 flex items-center gap-2 text-lg sm:text-xl font-bold text-yellow-900">
           <ShieldAlert /> Aguardando Aprovação
         </h2>
         
         {pendingUsers.length === 0 ? (
-          <p className="text-sm text-yellow-800">Nenhum usuário aguardando aprovação.</p>
+          <p className="text-sm text-yellow-800 dark:text-yellow-200">Nenhum usuário aguardando aprovação.</p>
         ) : (
           <div className="space-y-4">
             {pendingUsers.map(user => (
-              <div key={user.email} className="rounded-lg bg-white p-4 shadow-sm border border-yellow-100">
+              <div key={user.email} className="rounded-lg bg-white dark:bg-gray-800 p-4 shadow-sm border border-yellow-100">
                 <div className="mb-3 flex items-center justify-between">
-                  <span className="font-semibold text-gray-800">{user.email}</span>
-                  <span className="rounded-full bg-yellow-100 px-2.5 py-0.5 text-xs font-bold text-yellow-800">Camareira</span>
+                  <span className="font-semibold text-gray-800 dark:text-gray-100">{user.email}</span>
+                  <span className="rounded-full bg-yellow-100 dark:bg-yellow-900/50 px-2.5 py-0.5 text-xs font-bold text-yellow-800 dark:text-yellow-200">Camareira</span>
                 </div>
                 
                 <div className="mb-4">
-                  <p className="mb-2 text-xs font-semibold text-gray-500 uppercase tracking-wider">Atribuir Andares</p>
+                  <p className="mb-2 text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wider">Atribuir Andares</p>
                   <div className="flex flex-wrap gap-2">
                     {allFloors.map(floor => {
                       const isSelected = (selectedFloors[user.email] || []).includes(floor);
@@ -58,7 +58,7 @@ export default function GestorTab() {
                           onClick={() => toggleFloor(user.email, floor)}
                           className={clsx(
                             'rounded-full px-3 py-1 text-xs font-bold transition-colors',
-                            isSelected ? 'bg-blue-600 text-white' : 'bg-gray-100 text-gray-600 hover:bg-gray-200'
+                            isSelected ? 'bg-blue-600 text-white' : 'bg-gray-100 dark:bg-gray-800 text-gray-600 dark:text-gray-300 hover:bg-gray-200 dark:bg-gray-700'
                           )}
                         >
                           {floor}
@@ -80,22 +80,22 @@ export default function GestorTab() {
         )}
       </div>
 
-      <div className="rounded-xl border border-gray-200 bg-white p-6 shadow-sm">
-        <h2 className="mb-4 flex items-center gap-2 text-xl font-bold text-gray-800">
+      <div className="rounded-xl border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800 p-4 sm:p-6 shadow-sm">
+        <h2 className="mb-4 flex items-center gap-2 text-lg sm:text-xl font-bold text-gray-800 dark:text-gray-100">
           <UserCheck /> Equipe Aprovada
         </h2>
         
         {approvedUsers.length === 0 ? (
-          <p className="text-sm text-gray-500">Nenhuma camareira aprovada ainda.</p>
+          <p className="text-sm text-gray-500 dark:text-gray-400">Nenhuma camareira aprovada ainda.</p>
         ) : (
           <div className="space-y-3">
             {approvedUsers.map(user => (
-              <div key={user.email} className="flex items-center justify-between rounded-lg border border-gray-100 bg-gray-50 p-3">
+              <div key={user.email} className="flex items-center justify-between rounded-lg border border-gray-100 dark:border-gray-800 bg-gray-50 dark:bg-gray-900 p-3">
                 <div>
-                  <p className="font-semibold text-gray-800">{user.email}</p>
-                  <p className="text-xs text-gray-500">Andares: {user.floors?.join(', ')}</p>
+                  <p className="font-semibold text-gray-800 dark:text-gray-100">{user.email}</p>
+                  <p className="text-xs text-gray-500 dark:text-gray-400">Andares: {user.floors?.join(', ')}</p>
                 </div>
-                <button className="rounded-full bg-gray-200 p-2 text-gray-600 hover:bg-gray-300">
+                <button className="rounded-full bg-gray-200 dark:bg-gray-700 p-2 text-gray-600 dark:text-gray-300 hover:bg-gray-300">
                   <X size={16} />
                 </button>
               </div>
