@@ -84,7 +84,7 @@ interface SocketContextData {
 
 const SocketContext = createContext<SocketContextData>({} as SocketContextData);
 
-export const SocketProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
+export const SocketProvider: React.FC<{ children: React.ReactNode, user: any }> = ({ children, user }) => {
   const [socket, setSocket] = useState<Socket | null>(null);
   const [rooms, setRooms] = useState<Room[]>([]);
   const [dailyRooms, setDailyRooms] = useState<{ [id: string]: Room }[]>([]);
@@ -178,39 +178,39 @@ export const SocketProvider: React.FC<{ children: React.ReactNode }> = ({ childr
   }, []);
 
   const updateRoom = (id: string, updates: Partial<Room>, dayIndex: number = 0) => {
-    socket?.emit('update_room', { id, updates, dayIndex });
+    socket?.emit('update_room', { id, updates, dayIndex, user });
   };
 
   const swapRooms = (oldRoomId: string, newRoomId: string) => {
-    socket?.emit('swap_rooms', { oldRoomId, newRoomId });
+    socket?.emit('swap_rooms', { oldRoomId, newRoomId, user });
   };
 
   const requestSwap = (oldRoomId: string, newRoomId: string, reason: string, createdBy: string) => {
-    socket?.emit('request_swap', { oldRoomId, newRoomId, reason, createdBy });
+    socket?.emit('request_swap', { oldRoomId, newRoomId, reason, createdBy, user });
   };
 
   const approveSwap = (id: string) => {
-    socket?.emit('approve_swap', id);
+    socket?.emit('approve_swap', { id, user });
   };
 
   const rejectSwap = (id: string) => {
-    socket?.emit('reject_swap', id);
+    socket?.emit('reject_swap', { id, user });
   };
 
   const createOrder = (roomId: string, items: { item: string; quantity: number }[]) => {
-    socket?.emit('create_order', { roomId, items });
+    socket?.emit('create_order', { roomId, items, user });
   };
 
   const updateOrderStatus = (id: string, status: Order['status']) => {
-    socket?.emit('update_order_status', { id, status });
+    socket?.emit('update_order_status', { id, status, user });
   };
 
   const createMaintenance = (roomId: string, description: string, photoUrl: string | undefined, createdBy: string) => {
-    socket?.emit('create_maintenance', { roomId, description, photoUrl, createdBy });
+    socket?.emit('create_maintenance', { roomId, description, photoUrl, createdBy, user });
   };
 
   const resolveMaintenance = (id: string, status: 'corrigida' | 'nao_executada', reason?: string) => {
-    socket?.emit('resolve_maintenance', { id, status, reason });
+    socket?.emit('resolve_maintenance', { id, status, reason, user });
   };
 
   const approveUser = (email: string, floors: number[]) => {

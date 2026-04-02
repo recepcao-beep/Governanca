@@ -35,7 +35,7 @@ export default function App() {
   if (loading) return <div className="flex h-screen items-center justify-center">Carregando...</div>;
 
   return (
-    <SocketProvider>
+    <SocketProvider user={user}>
       {user ? <Dashboard user={user} onLogout={() => { localStorage.removeItem('token'); setUser(null); }} /> : <AuthScreen onLogin={setUser} />}
     </SocketProvider>
   );

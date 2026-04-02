@@ -337,13 +337,34 @@ io.on('connection', (socket) => {
   });
 
   socket.on('swap_rooms', async (data) => {
-    const { oldRoomId, newRoomId } = data;
+    const { oldRoomId, newRoomId, user } = data;
     if (rooms[oldRoomId] && rooms[newRoomId]) {
+      const timestamp = new Date().toISOString();
+      const userName = user?.name || user?.email || 'Sistema';
+
+      if (!rooms[oldRoomId].logs) rooms[oldRoomId].logs = [];
+      rooms[oldRoomId].logs.push({
+        timestamp,
+        user: userName,
+        field: 'status',
+        oldValue: rooms[oldRoomId].status,
+        newValue: 'vago'
+      });
+
+      if (!rooms[newRoomId].logs) rooms[newRoomId].logs = [];
+      rooms[newRoomId].logs.push({
+        timestamp,
+        user: userName,
+        field: 'status',
+        oldValue: rooms[newRoomId].status,
+        newValue: 'chegada'
+      });
+
       rooms[oldRoomId].status = 'vago';
       rooms[newRoomId].status = 'chegada';
-      io.emit('room_updated', rooms[oldRoomId]);
-      io.emit('room_updated', rooms[newRoomId]);
-      await syncToSheets();
+      io.emit('room_updated', { updatedRoom: rooms[oldRoomId], dayIndex: 0 });
+      io.emit('room_updated', { updatedRoom: rooms[newRoomId], dayIndex: 0 });
+      debouncedSyncToSheets();
     }
   });
 
@@ -364,16 +385,45 @@ io.on('connection', (socket) => {
     io.emit('swap_request_created', req);
   });
 
-  socket.on('approve_swap', async (id) => {
+  socket.on('approve_swap', async (data) => {
+    const { id, user } = typeof data === 'string' ? { id: data, user: null } : data;
     const req = swapRequests.find(r => r.id === id);
     if (req && req.status === 'pending') {
+      const timestamp = new Date().toISOString();
+      const userName = user?.name || user?.email || 'Sistema';
+
+      if (!req.logs) req.logs = [];
+      req.logs.push({
+        timestamp,
+        user: userName,
+        action: 'Aprovou troca'
+      });
+
       req.status = 'approved';
       if (rooms[req.oldRoomId] && rooms[req.newRoomId]) {
+        if (!rooms[req.oldRoomId].logs) rooms[req.oldRoomId].logs = [];
+        rooms[req.oldRoomId].logs.push({
+          timestamp,
+          user: userName,
+          field: 'status',
+          oldValue: rooms[req.oldRoomId].status,
+          newValue: 'vago'
+        });
+
+        if (!rooms[req.newRoomId].logs) rooms[req.newRoomId].logs = [];
+        rooms[req.newRoomId].logs.push({
+          timestamp,
+          user: userName,
+          field: 'status',
+          oldValue: rooms[req.newRoomId].status,
+          newValue: 'chegada'
+        });
+
         rooms[req.oldRoomId].status = 'vago';
         rooms[req.newRoomId].status = 'chegada';
-        io.emit('room_updated', rooms[req.oldRoomId]);
-        io.emit('room_updated', rooms[req.newRoomId]);
-        await syncToSheets();
+        io.emit('room_updated', { updatedRoom: rooms[req.oldRoomId], dayIndex: 0 });
+        io.emit('room_updated', { updatedRoom: rooms[req.newRoomId], dayIndex: 0 });
+        debouncedSyncToSheets();
       }
       io.emit('swap_request_updated', req);
 
@@ -382,6 +432,12 @@ io.on('connection', (socket) => {
         if (otherReq.status === 'pending' && otherReq.id !== id) {
           if (otherReq.oldRoomId === req.oldRoomId || otherReq.newRoomId === req.newRoomId || otherReq.newRoomId === req.oldRoomId || otherReq.oldRoomId === req.newRoomId) {
             otherReq.status = 'rejected';
+            if (!otherReq.logs) otherReq.logs = [];
+            otherReq.logs.push({
+              timestamp,
+              user: 'Sistema',
+              action: 'Rejeitado automaticamente (conflito)'
+            });
             io.emit('swap_request_updated', otherReq);
           }
         }
@@ -389,9 +445,20 @@ io.on('connection', (socket) => {
     }
   });
 
-  socket.on('reject_swap', (id) => {
+  socket.on('reject_swap', (data) => {
+    const { id, user } = typeof data === 'string' ? { id: data, user: null } : data;
     const req = swapRequests.find(r => r.id === id);
     if (req) {
+      const timestamp = new Date().toISOString();
+      const userName = user?.name || user?.email || 'Sistema';
+
+      if (!req.logs) req.logs = [];
+      req.logs.push({
+        timestamp,
+        user: userName,
+        action: 'Rejeitou troca'
+      });
+
       req.status = 'rejected';
       io.emit('swap_request_updated', req);
     }
@@ -416,9 +483,19 @@ io.on('connection', (socket) => {
   });
 
   socket.on('resolve_maintenance', async (data) => {
-    const { id, status, reason } = data;
+    const { id, status, reason, user } = data;
     const req = maintenanceRequests.find(r => r.id === id);
     if (req) {
+      const timestamp = new Date().toISOString();
+      const userName = user?.name || user?.email || 'Sistema';
+
+      if (!req.logs) req.logs = [];
+      req.logs.push({
+        timestamp,
+        user: userName,
+        action: `Resolveu manutenção: ${status}${reason ? ` (${reason})` : ''}`
+      });
+
       req.status = status;
       if (reason) req.resolutionReason = reason;
       io.emit('maintenance_updated', req);
@@ -462,9 +539,19 @@ io.on('connection', (socket) => {
   });
 
   socket.on('update_order_status', async (data) => {
-    const { id, status } = data;
+    const { id, status, user } = data;
     const order = orders.find(o => o.id === id);
     if (order) {
+      const timestamp = new Date().toISOString();
+      const userName = user?.name || user?.email || 'Sistema';
+
+      if (!order.logs) order.logs = [];
+      order.logs.push({
+        timestamp,
+        user: userName,
+        action: `Alterou status para: ${status}`
+      });
+
       order.status = status;
       io.emit('order_updated', order);
       await syncOrdersToSheets();

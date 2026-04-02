@@ -168,7 +168,10 @@ export default function ConfiguracoesTab({ user }: { user: any }) {
               <input 
                 type="number" 
                 value={localPackSizes.lencolCasal}
-                onChange={(e) => setLocalPackSizes({...localPackSizes, lencolCasal: Number(e.target.value)})}
+                onChange={(e) => {
+                  const val = e.target.value;
+                  setLocalPackSizes({...localPackSizes, lencolCasal: val === '' ? '' as any : Number(val)});
+                }}
                 className="w-full rounded-md border border-gray-300 dark:border-gray-600 p-2 text-lg font-bold text-gray-900 dark:text-gray-50 focus:border-purple-500 focus:ring-purple-500"
               />
             ) : (
@@ -181,7 +184,10 @@ export default function ConfiguracoesTab({ user }: { user: any }) {
               <input 
                 type="number" 
                 value={localPackSizes.lencolSolteiro}
-                onChange={(e) => setLocalPackSizes({...localPackSizes, lencolSolteiro: Number(e.target.value)})}
+                onChange={(e) => {
+                  const val = e.target.value;
+                  setLocalPackSizes({...localPackSizes, lencolSolteiro: val === '' ? '' as any : Number(val)});
+                }}
                 className="w-full rounded-md border border-gray-300 dark:border-gray-600 p-2 text-lg font-bold text-gray-900 dark:text-gray-50 focus:border-purple-500 focus:ring-purple-500"
               />
             ) : (
@@ -194,7 +200,10 @@ export default function ConfiguracoesTab({ user }: { user: any }) {
               <input 
                 type="number" 
                 value={localPackSizes.fronhas}
-                onChange={(e) => setLocalPackSizes({...localPackSizes, fronhas: Number(e.target.value)})}
+                onChange={(e) => {
+                  const val = e.target.value;
+                  setLocalPackSizes({...localPackSizes, fronhas: val === '' ? '' as any : Number(val)});
+                }}
                 className="w-full rounded-md border border-gray-300 dark:border-gray-600 p-2 text-lg font-bold text-gray-900 dark:text-gray-50 focus:border-purple-500 focus:ring-purple-500"
               />
             ) : (

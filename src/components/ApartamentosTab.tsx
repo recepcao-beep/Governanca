@@ -465,25 +465,28 @@ function FilterOption({ label, value, current, onSelect }: { label: string; valu
 function ArrumacaoModal({ room, onClose, onSubmit }: { room: any; onClose: () => void; onSubmit: (items: any[]) => void }) {
   const [items, setItems] = useState<{ item: string; quantity: number }[]>([]);
   const [selectedItem, setSelectedItem] = useState('Lençol');
-  const [quantity, setQuantity] = useState(1);
+  const [quantity, setQuantity] = useState<number | string>(1);
 
   const enxovalOptions = ['Lençol', 'Fronha', 'Toalha de Banho', 'Toalha de Rosto', 'Piso'];
 
   const handleAdd = () => {
+    const q = Number(quantity);
+    if (q <= 0) return;
     const existing = items.find(i => i.item === selectedItem);
     if (existing) {
-      setItems(items.map(i => i.item === selectedItem ? { ...i, quantity: i.quantity + quantity } : i));
+      setItems(items.map(i => i.item === selectedItem ? { ...i, quantity: i.quantity + q } : i));
     } else {
-      setItems([...items, { item: selectedItem, quantity }]);
+      setItems([...items, { item: selectedItem, quantity: q }]);
     }
     setQuantity(1);
   };
 
   const handleSubmit = () => {
     let finalItems = [...items];
+    const q = Number(quantity);
     // Se o usuário não adicionou nenhum item na lista, mas tem um selecionado com quantidade > 0, adiciona automaticamente
-    if (items.length === 0 && quantity > 0) {
-      finalItems = [{ item: selectedItem, quantity }];
+    if (items.length === 0 && q > 0) {
+      finalItems = [{ item: selectedItem, quantity: q }];
     }
     onSubmit(finalItems);
   };
@@ -508,7 +511,10 @@ function ArrumacaoModal({ room, onClose, onSubmit }: { room: any; onClose: () =>
               min="1"
               className="w-20 rounded-lg border border-gray-300 dark:border-gray-600 p-2 text-center text-sm outline-none"
               value={quantity}
-              onChange={(e) => setQuantity(parseInt(e.target.value) || 1)}
+              onChange={(e) => {
+                const val = e.target.value;
+                setQuantity(val === '' ? '' : parseInt(val));
+              }}
             />
             <button onClick={handleAdd} className="rounded-lg bg-blue-100 dark:bg-blue-900/50 px-3 text-blue-600 dark:text-blue-400 font-bold hover:bg-blue-200">+</button>
           </div>
