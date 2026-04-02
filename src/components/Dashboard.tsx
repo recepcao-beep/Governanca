@@ -15,64 +15,72 @@ export default function Dashboard({ user, onLogout }: { user: any; onLogout: () 
   const { theme, toggleTheme } = useTheme();
   const [activeTab, setActiveTab] = useState('apartamentos');
 
-  const [password, setPassword] = useState('');
-  const [error, setError] = useState('');
-
   // Find latest user state from socket
   const currentUser = users.find(u => u.email === user.email) || user;
 
-  const handlePasswordSubmit = async (e: React.FormEvent) => {
+  const [name, setName] = useState(currentUser.name || '');
+  const [updatingName, setUpdatingName] = useState(false);
+
+  const handleUpdateName = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (password === '0000') {
-      try {
-        const res = await fetch('/api/auth/approve-self', {
-          method: 'POST',
-          headers: {
-            'Content-Type': 'application/json',
-            'Authorization': `Bearer ${localStorage.getItem('token')}`
-          },
-          body: JSON.stringify({ password })
-        });
-        const data = await res.json();
-        if (data.token) {
-          localStorage.setItem('token', data.token);
-          window.location.reload();
-        } else {
-          setError('Erro ao atualizar permissão');
-        }
-      } catch (err) {
-        setError('Erro de conexão');
+    if (!name.trim()) return;
+    setUpdatingName(true);
+    try {
+      const res = await fetch('/api/auth/update-name', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${localStorage.getItem('token')}`
+        },
+        body: JSON.stringify({ name })
+      });
+      const data = await res.json();
+      if (data.token) {
+        localStorage.setItem('token', data.token);
+        // User state will be updated via socket or re-fetch
       }
-    } else {
-      setError('Senha incorreta');
+    } catch (err) {
+      console.error('Error updating name:', err);
     }
+    setUpdatingName(false);
   };
 
   if (!currentUser.approved) {
     return (
       <div className="flex h-screen flex-col items-center justify-center bg-gray-100 dark:bg-gray-900 p-4 text-center">
-        <div className="w-full max-w-sm rounded-xl bg-white dark:bg-gray-800 p-8 shadow-lg">
-          <h2 className="mb-4 text-2xl font-bold text-gray-800 dark:text-gray-100">Aguardando Aprovação</h2>
+        <div className="w-full max-w-sm rounded-3xl bg-white dark:bg-gray-800 p-8 shadow-xl">
+          <h2 className="mb-4 text-2xl font-bold text-gray-900 dark:text-gray-50">Aguardando Aprovação</h2>
           <p className="mb-6 text-gray-600 dark:text-gray-400">Seu acesso precisa ser liberado por um gestor.</p>
           
-          <div className="mb-6 border-t border-gray-200 dark:border-gray-700 pt-6">
-            <p className="mb-2 text-sm font-medium text-gray-700 dark:text-gray-300">Você é um gestor?</p>
-            <form onSubmit={handlePasswordSubmit} className="flex flex-col gap-2">
-              <input
-                type="password"
-                placeholder="Senha de acesso"
-                value={password}
-                onChange={(e) => setPassword(e.target.value)}
-                className="rounded-lg border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 p-3 text-gray-900 dark:text-gray-100 outline-none focus:border-blue-500 focus:ring-2 focus:ring-blue-500/20"
-              />
-              {error && <p className="text-sm text-red-600 dark:text-red-400">{error}</p>}
-              <button type="submit" className="rounded-lg bg-blue-600 p-3 font-bold text-white hover:bg-blue-700 dark:hover:bg-blue-500">
-                Liberar Acesso
+          {!currentUser.name ? (
+            <form onSubmit={handleUpdateName} className="mb-6 space-y-4 text-left">
+              <div>
+                <label className="mb-1 block text-sm font-medium text-gray-700 dark:text-gray-200">Seu Nome Completo</label>
+                <input
+                  type="text"
+                  required
+                  placeholder="Ex: Maria Silva"
+                  value={name}
+                  onChange={(e) => setName(e.target.value)}
+                  className="w-full rounded-xl border border-gray-300 dark:border-gray-600 p-4 outline-none focus:border-blue-500 focus:ring-2 focus:ring-blue-500/20"
+                />
+              </div>
+              <button 
+                type="submit" 
+                disabled={updatingName}
+                className="w-full rounded-xl bg-blue-600 p-4 font-bold text-white shadow-md transition-all hover:bg-blue-700 active:scale-95 disabled:opacity-50"
+              >
+                {updatingName ? 'Salvando...' : 'Salvar Nome'}
               </button>
             </form>
-          </div>
+          ) : (
+            <div className="mb-6 rounded-2xl bg-blue-50 dark:bg-blue-900/30 p-4 text-blue-700 dark:text-blue-300 font-medium">
+              Olá, <span className="font-bold">{currentUser.name}</span>! <br/>
+              Aguarde a liberação do seu acesso.
+            </div>
+          )}
 
-          <button onClick={onLogout} className="w-full rounded-lg bg-gray-200 dark:bg-gray-700 px-6 py-3 font-medium text-gray-700 dark:text-gray-300 hover:bg-gray-300 dark:hover:bg-gray-600">
+          <button onClick={onLogout} className="w-full rounded-xl bg-gray-100 dark:bg-gray-700 px-6 py-4 font-semibold text-gray-700 dark:text-gray-300 hover:bg-gray-200 dark:hover:bg-gray-600 transition-all">
             Sair
           </button>
         </div>

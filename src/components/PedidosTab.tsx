@@ -1,8 +1,9 @@
 import React, { useState } from 'react';
 import { useSocket } from '../SocketContext';
-import { Clock, CheckCircle2, AlertCircle, ClipboardList, XCircle, BellOff, BedDouble, Plus, X } from 'lucide-react';
+import { Clock, CheckCircle2, AlertCircle, ClipboardList, XCircle, BellOff, BedDouble, Plus, X, History } from 'lucide-react';
 import { format } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
+import LogModal from './LogModal';
 
 export default function PedidosTab({ user }: { user: any }) {
   const { orders, rooms, updateOrderStatus, packSizes, requestableItems, createOrder, swapRequests, approveSwap, rejectSwap } = useSocket();
@@ -10,6 +11,8 @@ export default function PedidosTab({ user }: { user: any }) {
   const [isCreatingOrder, setIsCreatingOrder] = useState(false);
   const [newOrderRoom, setNewOrderRoom] = useState('');
   const [newOrderItems, setNewOrderItems] = useState<{item: string, quantity: number}[]>([]);
+  const [showLogModal, setShowLogModal] = useState(false);
+  const [logTarget, setLogTarget] = useState<any>(null);
 
   // Sort by newest first
   const sortedOrders = [...orders].sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime());
@@ -248,6 +251,12 @@ export default function PedidosTab({ user }: { user: any }) {
                       <span className="text-sm font-bold text-gray-800 dark:text-gray-100">
                         {req.oldRoomId} &rarr; {req.newRoomId}
                       </span>
+                      <button 
+                        onClick={() => { setLogTarget(req); setShowLogModal(true); }}
+                        className="p-1 rounded-full hover:bg-black/5 dark:hover:bg-white/5 text-gray-400 hover:text-gray-600 transition-colors"
+                      >
+                        <History size={14} />
+                      </button>
                     </div>
                     <span className={`flex items-center gap-1 rounded-full px-2.5 py-1 text-[10px] font-bold uppercase tracking-wider ${
                       req.status === 'pending' ? 'bg-yellow-100 dark:bg-yellow-900/50 text-yellow-800 dark:text-yellow-200' : 
@@ -304,6 +313,12 @@ export default function PedidosTab({ user }: { user: any }) {
                         <span className="flex h-8 w-8 items-center justify-center rounded-lg bg-blue-100 dark:bg-blue-900/50 font-bold text-blue-700 dark:text-blue-300">
                           {order.roomId}
                         </span>
+                        <button 
+                          onClick={() => { setLogTarget(order); setShowLogModal(true); }}
+                          className="p-1 rounded-full hover:bg-black/5 dark:hover:bg-white/5 text-gray-400 hover:text-gray-600 transition-colors"
+                        >
+                          <History size={14} />
+                        </button>
                         <span className="text-xs text-gray-500 dark:text-gray-400">
                           {format(new Date(order.createdAt), "dd/MM HH:mm", { locale: ptBR })}
                         </span>
@@ -366,6 +381,12 @@ export default function PedidosTab({ user }: { user: any }) {
             </div>
           )}
         </>
+      )}
+      {showLogModal && logTarget && (
+        <LogModal 
+          target={logTarget} 
+          onClose={() => { setShowLogModal(false); setLogTarget(null); }} 
+        />
       )}
     </div>
   );

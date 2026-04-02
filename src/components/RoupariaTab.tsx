@@ -1,12 +1,15 @@
 import React, { useState } from 'react';
 import { useSocket } from '../SocketContext';
-import { PackageOpen, Users, CheckCircle2, BedDouble } from 'lucide-react';
+import { PackageOpen, Users, CheckCircle2, BedDouble, History } from 'lucide-react';
 import clsx from 'clsx';
+import LogModal from './LogModal';
 
 export default function RoupariaTab({ user }: { user: any }) {
   const { rooms, dailyRooms, updateRoom, packSizes } = useSocket();
   const [activeSubTab, setActiveSubTab] = useState<'lencois' | 'chegadas'>('lencois');
   const [selectedDayIndex, setSelectedDayIndex] = useState(0);
+  const [showLogModal, setShowLogModal] = useState(false);
+  const [logTarget, setLogTarget] = useState<any>(null);
 
   // Get rooms for the selected day
   const currentRooms = selectedDayIndex === 0 ? rooms : (dailyRooms[selectedDayIndex] ? Object.values(dailyRooms[selectedDayIndex]) : []);
@@ -185,8 +188,16 @@ export default function RoupariaTab({ user }: { user: any }) {
                           }`}
                         >
                           <div className="text-center">
-                            <div className="text-xl font-black text-gray-900 dark:text-gray-50 leading-none">
-                              {room.id}
+                            <div className="flex items-center justify-center gap-1">
+                              <div className="text-xl font-black text-gray-900 dark:text-gray-50 leading-none">
+                                {room.id}
+                              </div>
+                              <button 
+                                onClick={() => { setLogTarget(room); setShowLogModal(true); }}
+                                className="p-1 rounded-full hover:bg-black/5 dark:hover:bg-white/5 text-gray-400 hover:text-gray-600 transition-colors"
+                              >
+                                <History size={12} />
+                              </button>
                             </div>
                             <div className="mt-1 flex items-center justify-center gap-1 text-[10px] font-bold text-gray-500 dark:text-gray-400 uppercase tracking-wider">
                               <Users size={10} /> {room.pax} pax
@@ -215,6 +226,12 @@ export default function RoupariaTab({ user }: { user: any }) {
             </div>
           )}
         </div>
+      )}
+      {showLogModal && logTarget && (
+        <LogModal 
+          target={logTarget} 
+          onClose={() => { setShowLogModal(false); setLogTarget(null); }} 
+        />
       )}
     </div>
   );

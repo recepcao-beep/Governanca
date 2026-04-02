@@ -1,7 +1,8 @@
 import React, { useState, useRef } from 'react';
 import { useSocket } from '../SocketContext';
-import { BedDouble, Sparkles, Trash2, User, Calendar, BellOff, CheckCircle2, ArrowLeft, Layers, Check, Filter, ArrowRightLeft, Search, Camera, X } from 'lucide-react';
+import { BedDouble, Sparkles, Trash2, User, Calendar, BellOff, CheckCircle2, ArrowLeft, Home, Check, Filter, ArrowRightLeft, Search, Camera, X, History } from 'lucide-react';
 import clsx from 'clsx';
+import LogModal from './LogModal';
 
 export default function ApartamentosTab({ user }: { user: any }) {
   const { rooms, dailyRooms, updateRoom, createOrder, requestSwap, createMaintenance, swapRooms, swapRequests } = useSocket();
@@ -9,6 +10,8 @@ export default function ApartamentosTab({ user }: { user: any }) {
   const [selectedRoom, setSelectedRoom] = useState<any | null>(null);
   const [showArrumacaoModal, setShowArrumacaoModal] = useState(false);
   const [showSwapModal, setShowSwapModal] = useState(false);
+  const [showLogModal, setShowLogModal] = useState(false);
+  const [logTarget, setLogTarget] = useState<any>(null);
   const [filter, setFilter] = useState<'todos' | 'ocupado' | 'limpo' | 'sujo' | 'saida' | 'vestir' | 'chegada' | 'saida_chegada'>('todos');
   const [showFilterMenu, setShowFilterMenu] = useState(false);
   const [selectedDayIndex, setSelectedDayIndex] = useState(0);
@@ -37,18 +40,33 @@ export default function ApartamentosTab({ user }: { user: any }) {
             {allowedFloors.map(floor => {
               const floorRooms = rooms.filter(r => r.floor === floor);
               const dirtyRooms = floorRooms.filter(r => r.condition === 'sujo').length;
+              const arrivals = floorRooms.filter(r => r.status === 'chegada' || r.status === 'saida_chegada').length;
+              const departures = floorRooms.filter(r => r.status === 'saida' || r.status === 'saida_chegada').length;
+              const occupied = floorRooms.filter(r => r.status === 'ocupado').length;
               
               return (
                 <button
                   key={floor}
                   onClick={() => setSelectedFloor(floor)}
-                  className="flex flex-col items-center justify-center rounded-2xl border border-blue-100 dark:border-blue-900/50 bg-white dark:bg-gray-800 p-6 shadow-sm transition-all hover:bg-blue-50 dark:bg-blue-900/30 hover:shadow-md active:scale-95"
+                  className="flex flex-col items-center justify-center rounded-2xl border border-blue-100 dark:border-blue-900/50 bg-white dark:bg-gray-800 p-6 shadow-sm transition-all hover:bg-blue-50 dark:hover:bg-blue-900/30 hover:shadow-md active:scale-95"
                 >
                   <div className="mb-3 flex h-12 w-12 items-center justify-center rounded-full bg-blue-100 dark:bg-blue-900/50 text-blue-600 dark:text-blue-400">
-                    <Layers size={24} />
+                    <Home size={24} />
                   </div>
                   <span className="text-lg font-bold text-gray-800 dark:text-gray-100">Andar {floor}</span>
-                  <span className="mt-1 text-xs font-medium text-gray-500 dark:text-gray-400">{floorRooms.length} Quartos</span>
+                  
+                  <div className="mt-2 flex flex-wrap justify-center gap-1">
+                    <span className="rounded-md bg-emerald-50 dark:bg-emerald-900/30 px-1.5 py-0.5 text-[10px] font-bold text-emerald-700 dark:text-emerald-300">
+                      {arrivals} Cheg.
+                    </span>
+                    <span className="rounded-md bg-red-50 dark:bg-red-900/30 px-1.5 py-0.5 text-[10px] font-bold text-red-700 dark:text-red-300">
+                      {departures} Saíd.
+                    </span>
+                    <span className="rounded-md bg-blue-50 dark:bg-blue-900/30 px-1.5 py-0.5 text-[10px] font-bold text-blue-700 dark:text-blue-300">
+                      {occupied} Ocup.
+                    </span>
+                  </div>
+
                   {dirtyRooms > 0 && (
                     <span className="mt-2 rounded-full bg-red-100 dark:bg-red-900/50 px-2 py-0.5 text-[10px] font-bold text-red-600 dark:text-red-400">
                       {dirtyRooms} Sujos
@@ -145,10 +163,19 @@ export default function ApartamentosTab({ user }: { user: any }) {
                 room={room}
                 onUpdate={(updates) => updateRoom(room.id, updates, selectedDayIndex)}
                 onOpenArrumacao={() => handleOpenArrumacao(room)}
+                onOpenLog={() => { setLogTarget(room); setShowLogModal(true); }}
               />
             ))}
           </div>
         </div>
+      )}
+
+      {/* Log Modal */}
+      {showLogModal && logTarget && (
+        <LogModal 
+          target={logTarget} 
+          onClose={() => { setShowLogModal(false); setLogTarget(null); }} 
+        />
       )}
 
       {/* Arrumação Modal */}
@@ -184,7 +211,7 @@ export default function ApartamentosTab({ user }: { user: any }) {
   );
 }
 
-function RoomCard({ room, onUpdate, onOpenArrumacao }: { key?: React.Key; room: any; onUpdate: (updates: any) => void; onOpenArrumacao: () => void }) {
+function RoomCard({ room, onUpdate, onOpenArrumacao, onOpenLog }: { key?: React.Key; room: any; onUpdate: (updates: any) => void; onOpenArrumacao: () => void; onOpenLog: () => void }) {
   const [showConditionMenu, setShowConditionMenu] = useState(false);
 
   const bgColors = {
@@ -367,7 +394,16 @@ function RoomCard({ room, onUpdate, onOpenArrumacao }: { key?: React.Key; room: 
     <div className={clsx('relative flex flex-col justify-between rounded-xl border p-3 shadow-sm transition-all', bgColors[room.status as keyof typeof bgColors])}>
       {/* Header */}
       <div className="flex items-start justify-between gap-2">
-        <span className="text-2xl font-bold tracking-tight">{room.id}</span>
+        <div className="flex items-center gap-2">
+          <span className="text-2xl font-bold tracking-tight">{room.id}</span>
+          <button 
+            onClick={onOpenLog}
+            className="p-1 rounded-full hover:bg-black/5 dark:hover:bg-white/5 text-gray-400 hover:text-gray-600 transition-colors"
+            title="Ver Histórico"
+          >
+            <History size={14} />
+          </button>
+        </div>
         <div className="flex flex-col items-end gap-1 flex-shrink-0">
           <span className={clsx('text-[9px] sm:text-[10px] font-bold uppercase tracking-wider px-2 py-0.5 rounded-full text-center', badgeColors[room.status as keyof typeof badgeColors])}>
             {room.status === 'saida_chegada' ? 'SAIDA COM CHEGADA' : room.status}
@@ -515,7 +551,15 @@ function SwapModal({ rooms, allowedFloors, user, swapRequests, onClose, onReques
   const pendingSwapNewRoomIds = swapRequests.filter(req => req.status === 'pending').map(req => req.newRoomId);
   const pendingSwapOldRoomIds = swapRequests.filter(req => req.status === 'pending').map(req => req.oldRoomId);
   const chegadaRooms = rooms.filter(r => allowedFloors.includes(r.floor) && r.status === 'chegada' && !pendingSwapOldRoomIds.includes(r.id));
-  const vagoRooms = rooms.filter(r => allowedFloors.includes(r.floor) && r.status === 'vago' && r.id.toLowerCase().includes(searchQuery.toLowerCase()) && !pendingSwapNewRoomIds.includes(r.id));
+  
+  // Restrict suggestions to the same floor
+  const vagoRooms = rooms.filter(r => 
+    allowedFloors.includes(r.floor) && 
+    r.status === 'vago' && 
+    (!selectedOldRoom || r.floor === selectedOldRoom.floor) &&
+    r.id.toLowerCase().includes(searchQuery.toLowerCase()) && 
+    !pendingSwapNewRoomIds.includes(r.id)
+  );
 
   const handlePhotoCapture = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];

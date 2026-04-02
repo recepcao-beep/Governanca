@@ -1,8 +1,9 @@
 import React, { useState, useRef, useMemo } from 'react';
 import { useSocket } from '../SocketContext';
-import { Plus, X, Camera, CheckCircle2, Clock, Image as ImageIcon, XCircle, Filter } from 'lucide-react';
+import { Plus, X, Camera, CheckCircle2, Clock, Image as ImageIcon, XCircle, Filter, History } from 'lucide-react';
 import { format, isSameDay, parseISO } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
+import LogModal from './LogModal';
 
 export default function ManutencaoTab({ user }: { user: any }) {
   const { maintenanceRequests, rooms, createMaintenance, resolveMaintenance } = useSocket();
@@ -21,6 +22,8 @@ export default function ManutencaoTab({ user }: { user: any }) {
   const [resolutionStatus, setResolutionStatus] = useState<'corrigida' | 'nao_executada'>('corrigida');
   const [resolutionReason, setResolutionReason] = useState('');
   const [viewingPhoto, setViewingPhoto] = useState<string | null>(null);
+  const [showLogModal, setShowLogModal] = useState(false);
+  const [logTarget, setLogTarget] = useState<any>(null);
 
   const filteredRequests = useMemo(() => {
     return maintenanceRequests
@@ -277,6 +280,12 @@ export default function ManutencaoTab({ user }: { user: any }) {
                   <span className="flex h-8 w-8 items-center justify-center rounded-lg bg-blue-100 dark:bg-blue-900/50 font-bold text-blue-700 dark:text-blue-300">
                     {req.roomId}
                   </span>
+                  <button 
+                    onClick={() => { setLogTarget(req); setShowLogModal(true); }}
+                    className="p-1 rounded-full hover:bg-black/5 dark:hover:bg-white/5 text-gray-400 hover:text-gray-600 transition-colors"
+                  >
+                    <History size={14} />
+                  </button>
                   <span className="text-xs text-gray-500 dark:text-gray-400">
                     {format(new Date(req.createdAt), "dd/MM HH:mm", { locale: ptBR })}
                   </span>
@@ -402,6 +411,12 @@ export default function ManutencaoTab({ user }: { user: any }) {
             <img src={viewingPhoto} alt="Foto da manutenção" className="max-w-full max-h-[85vh] object-contain rounded-lg shadow-2xl" />
           </div>
         </div>
+      )}
+      {showLogModal && logTarget && (
+        <LogModal 
+          target={logTarget} 
+          onClose={() => { setShowLogModal(false); setLogTarget(null); }} 
+        />
       )}
     </div>
   );

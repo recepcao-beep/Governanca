@@ -48,7 +48,8 @@ function createInitialRooms() {
           dnd: false,
           arrumacao: false,
           trocaEnxoval: false,
-          linenDelivered: false
+          linenDelivered: false,
+          logs: []
         };
       }
     }
@@ -261,6 +262,33 @@ app.post('/api/auth/approve-self', (req, res) => {
   }
 });
 
+app.post('/api/auth/update-name', (req, res) => {
+  const token = req.headers.authorization?.split(' ')[1];
+  if (!token) return res.status(401).json({ error: 'Unauthorized' });
+
+  try {
+    const decoded: any = jwt.verify(token, JWT_SECRET);
+    const user = users[decoded.email];
+    if (!user) return res.status(404).json({ error: 'User not found' });
+
+    const { name } = req.body;
+    user.name = name;
+
+    const newToken = jwt.sign({ 
+      email: user.email, 
+      role: user.role,
+      name: user.name,
+      approved: user.approved,
+      floors: user.floors
+    }, JWT_SECRET);
+
+    io.emit('user_updated', user);
+    res.json({ token: newToken, user });
+  } catch (err) {
+    res.status(401).json({ error: 'Invalid token' });
+  }
+});
+
 // Socket.io for real-time updates
 io.on('connection', (socket) => {
   console.log('Client connected:', socket.id);
@@ -280,9 +308,28 @@ io.on('connection', (socket) => {
   });
 
   socket.on('update_room', async (data) => {
-    const { id, updates, dayIndex = 0 } = data;
+    const { id, updates, dayIndex = 0, user } = data;
     if (dailyRooms[dayIndex] && dailyRooms[dayIndex][id]) {
-      dailyRooms[dayIndex][id] = { ...dailyRooms[dayIndex][id], ...updates };
+      const room = dailyRooms[dayIndex][id];
+      
+      // Create log entry for each update
+      if (!room.logs) room.logs = [];
+      const timestamp = new Date().toISOString();
+      const userName = user?.name || user?.email || 'Sistema';
+      
+      Object.keys(updates).forEach(key => {
+        if (updates[key] !== room[key]) {
+          room.logs.push({
+            timestamp,
+            user: userName,
+            field: key,
+            oldValue: room[key],
+            newValue: updates[key]
+          });
+        }
+      });
+
+      dailyRooms[dayIndex][id] = { ...room, ...updates };
       if (dayIndex === 0) rooms = dailyRooms[0];
       io.emit('room_updated', { updatedRoom: dailyRooms[dayIndex][id], dayIndex });
       debouncedSyncToSheets();
@@ -301,7 +348,18 @@ io.on('connection', (socket) => {
   });
 
   socket.on('request_swap', (data) => {
-    const req = { id: Date.now().toString(), ...data, status: 'pending', createdAt: new Date().toISOString() };
+    const { user, ...rest } = data;
+    const req = { 
+      id: Date.now().toString(), 
+      ...rest, 
+      status: 'pending', 
+      createdAt: new Date().toISOString(),
+      logs: [{
+        timestamp: new Date().toISOString(),
+        user: user?.name || user?.email || 'Sistema',
+        action: 'Solicitou troca'
+      }]
+    };
     swapRequests.push(req);
     io.emit('swap_request_created', req);
   });
@@ -340,7 +398,18 @@ io.on('connection', (socket) => {
   });
 
   socket.on('create_maintenance', async (data) => {
-    const req = { id: Date.now().toString(), ...data, status: 'pendente', createdAt: new Date().toISOString() };
+    const { user, ...rest } = data;
+    const req = { 
+      id: Date.now().toString(), 
+      ...rest, 
+      status: 'pendente', 
+      createdAt: new Date().toISOString(),
+      logs: [{
+        timestamp: new Date().toISOString(),
+        user: user?.name || user?.email || 'Sistema',
+        action: 'Criou pedido de manutenção'
+      }]
+    };
     maintenanceRequests.push(req);
     io.emit('maintenance_created', req);
     await syncMaintenanceToSheets();
@@ -374,12 +443,18 @@ io.on('connection', (socket) => {
   });
 
   socket.on('create_order', async (data) => {
+    const { user, ...rest } = data;
     const order = {
       id: Date.now().toString(),
-      roomId: data.roomId,
-      items: data.items, // Array of { item, quantity }
+      roomId: rest.roomId,
+      items: rest.items, // Array of { item, quantity }
       status: 'pendente',
-      createdAt: new Date().toISOString()
+      createdAt: new Date().toISOString(),
+      logs: [{
+        timestamp: new Date().toISOString(),
+        user: user?.name || user?.email || 'Sistema',
+        action: 'Criou pedido de rouparia'
+      }]
     };
     orders.push(order);
     io.emit('order_created', order);
