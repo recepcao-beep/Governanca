@@ -41,7 +41,7 @@ function createInitialRooms() {
           id,
           floor,
           status: 'vago',
-          condition: 'limpo',
+          condition: 'sujo',
           pax: 0,
           arrivalDate: '',
           departureDate: '',
@@ -885,6 +885,12 @@ async function syncFromSheets() {
 
           if (['limpo', 'sujo', 'vestir'].includes(statusColC)) {
             dayRooms[id].condition = statusColC;
+          } else if (oldDayRooms[id] && oldDayRooms[id].condition) {
+            // Preserve condition if sheet is empty/invalid
+            dayRooms[id].condition = oldDayRooms[id].condition;
+          } else {
+            // Final fallback if absolutely nothing exists
+            dayRooms[id].condition = 'sujo';
           }
 
           const paxMatch = paxRaw.match(/^(\d+)/);
@@ -922,7 +928,8 @@ async function syncFromSheets() {
     lastSyncStatus = { 
       status: 'success', 
       message: 'Sincronizado com sucesso', 
-      time: new Date().toLocaleTimeString('pt-BR', { timeZone: 'America/Sao_Paulo' })
+      time: new Date().toLocaleTimeString('pt-BR', { timeZone: 'America/Sao_Paulo' }),
+      debug: `Lidos ${governancaData.length} quartos da planilha.`
     };
     io.emit('sync_status', lastSyncStatus);
     io.emit('initial_data', { 
