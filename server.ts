@@ -77,11 +77,46 @@ let requestableItems = [
   "Fronha"
 ];
 
+function checkAutoVago() {
+  const now = new Date();
+  const currentHour = now.getHours();
+  // Auto transition saidas to vago after 14:00 (America/Sao_Paulo time usually)
+  // We use the local server time, assuming it's correctly configured or the users are in the same zone.
+  if (currentHour >= 14) {
+    let changed = false;
+    for (let id in rooms) {
+      if (rooms[id].status === 'saida') {
+        rooms[id].status = 'vago';
+        changed = true;
+      } else if (rooms[id].status === 'saida_chegada') {
+        rooms[id].status = 'chegada';
+        changed = true;
+      }
+    }
+    if (changed) {
+      io.emit('initial_data', { 
+        rooms: Object.values(rooms), 
+        dailyRooms,
+        orders, 
+        users: Object.values(users), 
+        packSizes, 
+        requestableItems, 
+        swapRequests, 
+        maintenanceRequests 
+      });
+      debouncedSyncToSheets();
+    }
+  }
+}
+
 // Initial sync on startup
 setTimeout(() => {
   syncFromSheets();
   // Set up polling every 30 seconds to keep data fresh
-  setInterval(syncFromSheets, 30000);
+  setInterval(() => {
+    syncFromSheets();
+    checkAutoVago();
+  }, 30000);
 }, 2000);
 
 let deletedRooms: string[] = [];
@@ -623,19 +658,35 @@ async function debouncedSyncToSheets() {
   }, 5000);
 }
 
+// Status mapping for writing back to sheets
+function statusToSheetString(status: string) {
+  switch (status) {
+    case 'vago': return 'Vago';
+    case 'ocupado': return 'Ocupado';
+    case 'chegada': return 'Chegada';
+    case 'saida': return 'Saida';
+    case 'saida_chegada': return 'Saida com Chegada';
+    case 'interditado': return 'Interditado';
+    default: return 'Vago';
+  }
+}
+
 async function syncToSheets() {
   const sheets = await getSheetsClient();
   if (!sheets || !sheetRoomOrder.length) return;
 
   try {
-    // Update Column C for each day
+    // Update Column B and C for each day
     for (let dayIndex = 0; dayIndex < dailyRooms.length; dayIndex++) {
       const order = sheetRoomOrder[dayIndex];
       const dayRooms = dailyRooms[dayIndex];
       
       if (!order || order.length === 0) continue;
 
-      const values = order.map(id => [dayRooms[id]?.condition || 'sujo']);
+      const values = order.map(id => [
+        statusToSheetString(dayRooms[id]?.status || 'vago'),
+        dayRooms[id]?.condition || 'sujo'
+      ]);
       
       // Calculate start row based on previous blocks' lengths
       let startRow = 2;
@@ -643,7 +694,7 @@ async function syncToSheets() {
         startRow += sheetRoomOrder[i].length + 1; // +1 for the empty row
       }
       
-      const range = `STATUS_GOVERNANCA!C${startRow}:C${startRow + order.length - 1}`;
+      const range = `STATUS_GOVERNANCA!B${startRow}:C${startRow + order.length - 1}`;
       
       await sheets.spreadsheets.values.update({
         spreadsheetId: sheetsConfig.spreadsheetId,

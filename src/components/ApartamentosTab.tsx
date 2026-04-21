@@ -22,6 +22,11 @@ export default function ApartamentosTab({ user }: { user: any }) {
   const currentDailyRooms = dailyRooms[selectedDayIndex] || {};
   const displayRooms = selectedDayIndex === 0 ? rooms : Object.values(currentDailyRooms);
 
+  // Global Totals for Today
+  const globalArrivals = rooms.filter(r => r.status === 'chegada' || r.status === 'saida_chegada').length;
+  const globalDepartures = rooms.filter(r => r.status === 'saida' || r.status === 'saida_chegada').length;
+  const globalOccupied = rooms.filter(r => r.status === 'ocupado').length;
+
   if (allowedFloors.length === 0) {
     return <div className="p-4 text-center text-gray-500 dark:text-gray-400">Nenhum andar atribuído a você.</div>;
   }
@@ -35,7 +40,23 @@ export default function ApartamentosTab({ user }: { user: any }) {
     <div className="flex flex-col relative">
       {selectedFloor === null ? (
         <div className="space-y-4">
-          <h2 className="text-xl font-bold text-gray-800 dark:text-gray-100">Selecione um Andar</h2>
+          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+            <h2 className="text-xl font-bold text-gray-800 dark:text-gray-100">Selecione um Andar</h2>
+            <div className="flex gap-2">
+              <div className="flex flex-col items-center bg-emerald-50 dark:bg-emerald-900/20 border border-emerald-100 dark:border-emerald-900/50 px-3 py-1.5 rounded-xl">
+                <span className="text-[10px] font-bold text-emerald-600 dark:text-emerald-400 uppercase">Chegadas Total</span>
+                <span className="text-lg font-black text-emerald-700 dark:text-emerald-300">{globalArrivals}</span>
+              </div>
+              <div className="flex flex-col items-center bg-red-50 dark:bg-red-900/20 border border-red-100 dark:border-red-900/50 px-3 py-1.5 rounded-xl">
+                <span className="text-[10px] font-bold text-red-600 dark:text-red-400 uppercase">Saídas Total</span>
+                <span className="text-lg font-black text-red-700 dark:text-red-300">{globalDepartures}</span>
+              </div>
+              <div className="flex flex-col items-center bg-blue-50 dark:bg-blue-900/20 border border-blue-100 dark:border-blue-900/50 px-3 py-1.5 rounded-xl">
+                <span className="text-[10px] font-bold text-blue-600 dark:text-blue-400 uppercase">Ocupados Total</span>
+                <span className="text-lg font-black text-blue-700 dark:text-blue-300">{globalOccupied}</span>
+              </div>
+            </div>
+          </div>
           <div className="grid grid-cols-2 gap-4 sm:grid-cols-3">
             {allowedFloors.map(floor => {
               const floorRooms = rooms.filter(r => r.floor === floor);
@@ -313,7 +334,7 @@ function RoomCard({ room, onUpdate, onOpenArrumacao, onOpenLog }: { key?: React.
         </div>
       );
     }
-  } else if (room.status === 'vago' || room.status === 'chegada' || room.status === 'saida_chegada') {
+  } else if (room.status === 'vago' || room.status === 'chegada' || room.status === 'saida_chegada' || room.status === 'saida') {
     const conditionColors = {
       sujo: 'bg-red-800 text-white hover:bg-red-700 border-red-900',
       limpo: 'bg-green-600 text-white hover:bg-green-50 dark:bg-green-900/300 border-green-700',
@@ -374,12 +395,6 @@ function RoomCard({ room, onUpdate, onOpenArrumacao, onOpenLog }: { key?: React.
             </div>
           </>
         )}
-      </div>
-    );
-  } else if (room.status === 'saida') {
-    controls = (
-      <div className="mt-2 flex justify-center rounded-lg bg-red-50 dark:bg-red-900/30 p-2.5 text-xs font-bold text-red-700 dark:text-red-300 text-center border border-red-100">
-        Check-out
       </div>
     );
   } else if (room.status === 'interditado') {
