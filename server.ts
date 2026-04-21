@@ -364,7 +364,8 @@ io.on('connection', (socket) => {
         }
       });
 
-      dailyRooms[dayIndex][id] = { ...room, ...updates };
+      // Mark as locally updated to prevent polling overwrite for a few minutes
+      dailyRooms[dayIndex][id] = { ...room, ...updates, lastLocalUpdate: Date.now() };
       if (dayIndex === 0) rooms = dailyRooms[0];
       io.emit('room_updated', { updatedRoom: dailyRooms[dayIndex][id], dayIndex });
       debouncedSyncToSheets();
@@ -703,8 +704,21 @@ async function syncToSheets() {
         requestBody: { values }
       });
     }
-  } catch (error) {
+
+    lastSyncStatus = { 
+      status: 'success', 
+      message: 'Escrito na planilha com sucesso', 
+      time: new Date().toLocaleTimeString('pt-BR', { timeZone: 'America/Sao_Paulo' })
+    };
+    io.emit('sync_status', lastSyncStatus);
+  } catch (error: any) {
     console.error('Error syncing to sheets:', error);
+    lastSyncStatus = { 
+      status: 'error', 
+      message: 'Erro ao escrever na planilha: ' + (error.message || ''), 
+      time: new Date().toLocaleTimeString('pt-BR', { timeZone: 'America/Sao_Paulo' })
+    };
+    io.emit('sync_status', lastSyncStatus);
   }
 }
 
@@ -829,12 +843,25 @@ async function syncFromSheets() {
         dayOrder.push(id);
 
         if (id && dayRooms[id]) {
-          // Preserve manual flags if room existed before
+          // Preserve manual flags and recent local updates
           if (oldDayRooms[id]) {
             dayRooms[id].arrumacao = oldDayRooms[id].arrumacao;
             dayRooms[id].trocaEnxoval = oldDayRooms[id].trocaEnxoval;
             dayRooms[id].dnd = oldDayRooms[id].dnd;
             dayRooms[id].linenDelivered = oldDayRooms[id].linenDelivered;
+            dayRooms[id].logs = oldDayRooms[id].logs || [];
+            
+            // If the room was updated locally in the last 5 minutes, 
+            // prioritize the local status and condition over the spreadsheet
+            // to allow for sync propagation time.
+            if (oldDayRooms[id].lastLocalUpdate && (Date.now() - oldDayRooms[id].lastLocalUpdate < 300000)) {
+              dayRooms[id].status = oldDayRooms[id].status;
+              dayRooms[id].condition = oldDayRooms[id].condition;
+              dayRooms[id].lastLocalUpdate = oldDayRooms[id].lastLocalUpdate;
+              
+              // Skip the rest of the parsing for this room
+              return;
+            }
           }
 
           const situation = String(row[1] || '').toLowerCase().trim();
