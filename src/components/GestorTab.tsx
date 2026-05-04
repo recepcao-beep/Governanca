@@ -31,8 +31,8 @@ export default function GestorTab() {
 
   return (
     <div className="space-y-6">
-      <div className="rounded-xl border border-yellow-200 bg-yellow-50 dark:bg-yellow-900/30 p-4 sm:p-6">
-        <h2 className="mb-4 flex items-center gap-2 text-lg sm:text-xl font-bold text-yellow-900">
+      <div className="rounded-xl border border-yellow-200 dark:border-yellow-900/50 bg-yellow-50 dark:bg-yellow-900/30 p-4 sm:p-6">
+        <h2 className="mb-4 flex items-center gap-2 text-lg sm:text-xl font-bold text-yellow-900 dark:text-yellow-200">
           <ShieldAlert /> Aguardando Aprovação
         </h2>
         
@@ -80,7 +80,7 @@ export default function GestorTab() {
         )}
       </div>
 
-      <div className="rounded-xl border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800 p-4 sm:p-6 shadow-sm">
+      <div className="rounded-xl border border-gray-200/50 dark:border-gray-700 bg-slate-50/50 dark:bg-gray-800 p-4 sm:p-6 shadow-sm">
         <h2 className="mb-4 flex items-center gap-2 text-lg sm:text-xl font-bold text-gray-800 dark:text-gray-100">
           <UserCheck /> Equipe Aprovada
         </h2>

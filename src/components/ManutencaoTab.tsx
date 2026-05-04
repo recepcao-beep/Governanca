@@ -155,7 +155,7 @@ export default function ManutencaoTab({ user }: { user: any }) {
               type="date"
               value={filterDate}
               onChange={(e) => setFilterDate(e.target.value)}
-              className="pl-3 pr-3 py-2 rounded-lg border border-gray-300 dark:border-gray-600 text-sm focus:border-blue-500 focus:ring-1 focus:ring-blue-500 outline-none"
+              className="pl-3 pr-3 py-2 rounded-lg border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-800 text-sm text-gray-900 dark:text-gray-100 focus:border-blue-500 focus:ring-1 focus:ring-blue-500 outline-none"
             />
             {filterDate && (
               <button onClick={() => setFilterDate('')} className="absolute right-2 top-1/2 -translate-y-1/2 bg-white dark:bg-gray-800 p-1 text-gray-400 hover:text-gray-600 dark:text-gray-300">
@@ -169,7 +169,7 @@ export default function ManutencaoTab({ user }: { user: any }) {
               placeholder="Filtrar por quarto..."
               value={filterRoom}
               onChange={(e) => setFilterRoom(e.target.value)}
-              className="pl-3 pr-8 py-2 w-40 rounded-lg border border-gray-300 dark:border-gray-600 text-sm focus:border-blue-500 focus:ring-1 focus:ring-blue-500 outline-none"
+              className="pl-3 pr-8 py-2 w-40 rounded-lg border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-800 text-sm text-gray-900 dark:text-gray-100 focus:border-blue-500 focus:ring-1 focus:ring-blue-500 outline-none"
             />
             {filterRoom && (
               <button onClick={() => setFilterRoom('')} className="absolute right-2 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600 dark:text-gray-300">
@@ -382,7 +382,7 @@ export default function ManutencaoTab({ user }: { user: any }) {
                     value={resolutionReason}
                     onChange={(e) => setResolutionReason(e.target.value)}
                     placeholder="Por que não foi executada?"
-                    className="w-full rounded-lg border border-gray-300 dark:border-gray-600 p-3 text-gray-900 dark:text-gray-50 focus:border-blue-500 focus:ring-blue-500"
+                    className="w-full rounded-lg border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-800 p-3 text-gray-900 dark:text-gray-100 focus:border-blue-500 focus:ring-blue-500"
                     rows={3}
                   />
                 </div>

@@ -82,7 +82,7 @@ export default function PedidosTab({ user }: { user: any }) {
         <button
           onClick={() => setActiveSubTab('pedidos')}
           className={`flex-1 shrink-0 min-w-max whitespace-nowrap rounded-lg py-2 px-4 text-xs sm:text-sm font-bold transition-all ${
-            activeSubTab === 'pedidos' ? 'bg-white dark:bg-gray-800 text-blue-600 dark:text-blue-400 shadow-sm' : 'text-gray-600 dark:text-gray-300 hover:text-gray-900 dark:text-gray-50'
+            activeSubTab === 'pedidos' ? 'bg-slate-50 dark:bg-gray-800 text-blue-600 dark:text-blue-400 shadow-sm' : 'text-gray-600 dark:text-gray-300 hover:text-gray-900 dark:text-gray-50'
           }`}
         >
           Pedidos de Camareiras
@@ -90,7 +90,7 @@ export default function PedidosTab({ user }: { user: any }) {
         <button
           onClick={() => setActiveSubTab('enxoval')}
           className={`flex-1 shrink-0 min-w-max whitespace-nowrap rounded-lg py-2 px-4 text-xs sm:text-sm font-bold transition-all ${
-            activeSubTab === 'enxoval' ? 'bg-white dark:bg-gray-800 text-blue-600 dark:text-blue-400 shadow-sm' : 'text-gray-600 dark:text-gray-300 hover:text-gray-900 dark:text-gray-50'
+            activeSubTab === 'enxoval' ? 'bg-slate-50 dark:bg-gray-800 text-blue-600 dark:text-blue-400 shadow-sm' : 'text-gray-600 dark:text-gray-300 hover:text-gray-900 dark:text-gray-50'
           }`}
         >
           Resumo de Enxoval
@@ -205,17 +205,17 @@ export default function PedidosTab({ user }: { user: any }) {
           <div className="grid gap-4 sm:grid-cols-3">
             <div className="flex flex-col items-center justify-center rounded-xl bg-blue-50 dark:bg-blue-900/30 p-6 border border-blue-100 dark:border-blue-900/50">
               <span className="text-4xl font-black text-blue-700 dark:text-blue-300">{Math.ceil(totalLencolCasal / packSizes.lencolCasal)}</span>
-              <span className="mt-2 text-sm font-bold text-blue-900 uppercase tracking-wider text-center">Pacotes de Casal</span>
+              <span className="mt-2 text-sm font-bold text-blue-900 dark:text-blue-200 uppercase tracking-wider text-center">Pacotes de Casal</span>
               <span className="mt-1 text-xs text-blue-600 dark:text-blue-400 text-center">{totalLencolCasal} unidades ({packSizes.lencolCasal} un/pacote)</span>
             </div>
-            <div className="flex flex-col items-center justify-center rounded-xl bg-emerald-50 p-6 border border-emerald-100">
-              <span className="text-4xl font-black text-emerald-700">{Math.ceil(totalLencolSolteiro / packSizes.lencolSolteiro)}</span>
-              <span className="mt-2 text-sm font-bold text-emerald-900 uppercase tracking-wider text-center">Pacotes de Solteiro</span>
-              <span className="mt-1 text-xs text-emerald-600 text-center">{totalLencolSolteiro} unidades ({packSizes.lencolSolteiro} un/pacote)</span>
+            <div className="flex flex-col items-center justify-center rounded-xl bg-emerald-50 dark:bg-emerald-900/30 p-6 border border-emerald-100 dark:border-emerald-900/50">
+              <span className="text-4xl font-black text-emerald-700 dark:text-emerald-300">{Math.ceil(totalLencolSolteiro / packSizes.lencolSolteiro)}</span>
+              <span className="mt-2 text-sm font-bold text-emerald-900 dark:text-emerald-200 uppercase tracking-wider text-center">Pacotes de Solteiro</span>
+              <span className="mt-1 text-xs text-emerald-600 dark:text-emerald-400 text-center">{totalLencolSolteiro} unidades ({packSizes.lencolSolteiro} un/pacote)</span>
             </div>
-            <div className="flex flex-col items-center justify-center rounded-xl bg-purple-50 dark:bg-purple-900/30 p-6 border border-purple-100">
+            <div className="flex flex-col items-center justify-center rounded-xl bg-purple-50 dark:bg-purple-900/30 p-6 border border-purple-100 dark:border-purple-900/50">
               <span className="text-4xl font-black text-purple-700 dark:text-purple-300">{Math.ceil(totalFronhas / packSizes.fronhas)}</span>
-              <span className="mt-2 text-sm font-bold text-purple-900 uppercase tracking-wider text-center">Pacotes de Fronhas</span>
+              <span className="mt-2 text-sm font-bold text-purple-900 dark:text-purple-200 uppercase tracking-wider text-center">Pacotes de Fronhas</span>
               <span className="mt-1 text-xs text-purple-600 dark:text-purple-400 text-center">{totalFronhas} unidades ({packSizes.fronhas} un/pacote)</span>
             </div>
           </div>

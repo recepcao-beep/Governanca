@@ -44,7 +44,7 @@ export default function DashboardTab() {
       {/* Room Condition Summary Cards */}
       <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
         <div className="rounded-xl border border-green-100 dark:border-green-900/50 bg-green-50 dark:bg-green-900/20 p-3 sm:p-4 flex items-center gap-3 sm:gap-4">
-          <div className="p-2 sm:p-3 bg-green-100 dark:bg-green-800 rounded-full text-green-600 dark:text-green-300">
+          <div className="p-2 sm:p-3 bg-green-100 dark:bg-green-900/40 rounded-full text-green-600 dark:text-green-400">
             <CheckCircle2 size={20} className="sm:w-6 sm:h-6" />
           </div>
           <div>
@@ -54,7 +54,7 @@ export default function DashboardTab() {
         </div>
         
         <div className="rounded-xl border border-red-100 dark:border-red-900/50 bg-red-50 dark:bg-red-900/20 p-3 sm:p-4 flex items-center gap-3 sm:gap-4">
-          <div className="p-2 sm:p-3 bg-red-100 dark:bg-red-800 rounded-full text-red-600 dark:text-red-300">
+          <div className="p-2 sm:p-3 bg-red-100 dark:bg-red-900/40 rounded-full text-red-600 dark:text-red-400">
             <AlertCircle size={20} className="sm:w-6 sm:h-6" />
           </div>
           <div>
@@ -62,9 +62,9 @@ export default function DashboardTab() {
             <p className="text-xl sm:text-2xl font-bold text-red-700 dark:text-red-300">{sujoCount}</p>
           </div>
         </div>
-
+ 
         <div className="rounded-xl border border-blue-100 dark:border-blue-900/50 bg-blue-50 dark:bg-blue-900/20 p-3 sm:p-4 flex items-center gap-3 sm:gap-4">
-          <div className="p-2 sm:p-3 bg-blue-100 dark:bg-blue-800 rounded-full text-blue-600 dark:text-blue-300">
+          <div className="p-2 sm:p-3 bg-blue-100 dark:bg-blue-900/40 rounded-full text-blue-600 dark:text-blue-400">
             <Wrench size={20} className="sm:w-6 sm:h-6" />
           </div>
           <div>
@@ -76,7 +76,7 @@ export default function DashboardTab() {
 
       <div className="grid gap-6 md:grid-cols-2">
         {/* Gráfico de Condição */}
-        <div className="rounded-xl border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800 p-4 sm:p-6 shadow-sm">
+        <div className="rounded-xl border border-gray-200/50 dark:border-gray-700 bg-slate-50/50 dark:bg-gray-800 p-4 sm:p-6 shadow-sm">
           <h3 className="mb-4 text-lg font-bold text-gray-700 dark:text-gray-200">Condição dos Quartos</h3>
           <div className="h-64">
             <ResponsiveContainer width="100%" height="100%">
@@ -147,7 +147,7 @@ export default function DashboardTab() {
         <h3 className="mb-4 text-lg font-bold text-gray-700 dark:text-gray-200">Relatório de Manutenções</h3>
         <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
           <div className="rounded-xl border border-blue-100 dark:border-blue-900/50 bg-blue-50 dark:bg-blue-900/20 p-3 sm:p-4 flex items-center gap-3 sm:gap-4">
-            <div className="p-2 sm:p-3 bg-blue-100 dark:bg-blue-800 rounded-full text-blue-600 dark:text-blue-300">
+            <div className="p-2 sm:p-3 bg-blue-100 dark:bg-blue-900/40 rounded-full text-blue-600 dark:text-blue-400">
               <Wrench size={20} className="sm:w-6 sm:h-6" />
             </div>
             <div>
@@ -157,7 +157,7 @@ export default function DashboardTab() {
           </div>
           
           <div className="rounded-xl border border-green-100 dark:border-green-900/50 bg-green-50 dark:bg-green-900/20 p-3 sm:p-4 flex items-center gap-3 sm:gap-4">
-            <div className="p-2 sm:p-3 bg-green-100 dark:bg-green-800 rounded-full text-green-600 dark:text-green-300">
+            <div className="p-2 sm:p-3 bg-green-100 dark:bg-green-900/40 rounded-full text-green-600 dark:text-green-400">
               <CheckCircle2 size={20} className="sm:w-6 sm:h-6" />
             </div>
             <div>
@@ -167,7 +167,7 @@ export default function DashboardTab() {
           </div>
 
           <div className="rounded-xl border border-red-100 dark:border-red-900/50 bg-red-50 dark:bg-red-900/20 p-3 sm:p-4 flex items-center gap-3 sm:gap-4">
-            <div className="p-2 sm:p-3 bg-red-100 dark:bg-red-800 rounded-full text-red-600 dark:text-red-300">
+            <div className="p-2 sm:p-3 bg-red-100 dark:bg-red-900/40 rounded-full text-red-600 dark:text-red-400">
               <AlertCircle size={20} className="sm:w-6 sm:h-6" />
             </div>
             <div>

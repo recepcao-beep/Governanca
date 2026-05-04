@@ -10,40 +10,49 @@ export default function RoupariaTab({ user }: { user: any }) {
   const [selectedDayIndex, setSelectedDayIndex] = useState(0);
   const [showLogModal, setShowLogModal] = useState(false);
   const [logTarget, setLogTarget] = useState<any>(null);
+  const [showInfoForFloor, setShowInfoForFloor] = useState<number | null>(null);
 
   // Get rooms for the selected day
   const currentRooms = selectedDayIndex === 0 ? rooms : (dailyRooms[selectedDayIndex] ? Object.values(dailyRooms[selectedDayIndex]) : []);
 
-  // Calculate required linens for rooms that are NOT limpo
-  const roomsToClean = currentRooms.filter(r => r.condition !== 'limpo');
+  // Floor configuration and calculation logic
+  const floorsToDisplay = [200, 300, 400, 500, 600, 700];
   
-  // Group by floor
-  const floors = Array.from(new Set(roomsToClean.map(r => r.floor))).sort((a: number, b: number) => a - b);
-  
-  const floorData = floors.map(floor => {
-    const floorRooms = roomsToClean.filter(r => r.floor === floor);
-    let lencolCasal = 0;
-    let lencolSolteiro = 0;
-    let fronhas = 0;
+  const floorData = floorsToDisplay.map(floor => {
+    const floorRooms = currentRooms.filter(r => r.floor === floor);
+    
+    // Vagos: vestir ou sujo
+    const targetVagoRooms = floorRooms.filter(r => r.status === 'vago' && (r.condition === 'vestir' || r.condition === 'sujo'));
+    const countVago = targetVagoRooms.length;
+    
+    // Ocupados: 50%
+    const targetOcupadoRooms = floorRooms.filter(r => r.status === 'ocupado');
+    const countOcupado = targetOcupadoRooms.length;
+    const countOcupadoCalc = countOcupado * 0.5;
 
-    floorRooms.forEach(room => {
-      fronhas += 5;
-      if (room.floor === 200) {
-        lencolCasal += 4;
-      } else {
-        lencolSolteiro += 4;
-        lencolCasal += 2;
-      }
-    });
+    const totalCalculatedUnits = countVago + countOcupadoCalc;
+
+    // Requirements per room unit
+    const req = floor === 200 
+      ? { casal: 4, solteiro: 0, fronhas: 4 }
+      : { casal: 2, solteiro: 4, fronhas: 4 };
+
+    const lencolCasal = Math.ceil(totalCalculatedUnits * req.casal);
+    const lencolSolteiro = Math.ceil(totalCalculatedUnits * req.solteiro);
+    const fronhas = Math.ceil(totalCalculatedUnits * req.fronhas);
 
     return {
       floor,
+      countVago,
+      countOcupado,
+      countOcupadoCalc,
+      req,
       lencolCasal,
       lencolSolteiro,
       fronhas,
-      casalPacks: Math.ceil(lencolCasal / packSizes.lencolCasal),
-      solteiroPacks: Math.ceil(lencolSolteiro / packSizes.lencolSolteiro),
-      fronhasPacks: Math.ceil(fronhas / packSizes.fronhas),
+      casalPacks: Math.ceil(lencolCasal / (packSizes.lencolCasal || 1)),
+      solteiroPacks: Math.ceil(lencolSolteiro / (packSizes.lencolSolteiro || 1)),
+      fronhasPacks: Math.ceil(fronhas / (packSizes.fronhas || 1)),
     };
   });
 
@@ -51,9 +60,9 @@ export default function RoupariaTab({ user }: { user: any }) {
   const totalLencolSolteiro = floorData.reduce((acc, curr) => acc + curr.lencolSolteiro, 0);
   const totalFronhas = floorData.reduce((acc, curr) => acc + curr.fronhas, 0);
 
-  const totalCasalPacks = Math.ceil(totalLencolCasal / packSizes.lencolCasal);
-  const totalSolteiroPacks = Math.ceil(totalLencolSolteiro / packSizes.lencolSolteiro);
-  const totalFronhasPacks = Math.ceil(totalFronhas / packSizes.fronhas);
+  const totalCasalPacks = Math.ceil(totalLencolCasal / (packSizes.lencolCasal || 1));
+  const totalSolteiroPacks = Math.ceil(totalLencolSolteiro / (packSizes.lencolSolteiro || 1));
+  const totalFronhasPacks = Math.ceil(totalFronhas / (packSizes.fronhas || 1));
 
   const chegadas = currentRooms.filter(r => r.status === 'chegada');
 
@@ -113,17 +122,17 @@ export default function RoupariaTab({ user }: { user: any }) {
             <div className="grid gap-4 sm:grid-cols-3">
               <div className="flex flex-col items-center justify-center rounded-xl bg-blue-50 dark:bg-blue-900/30 p-4 border border-blue-100 dark:border-blue-900/50">
                 <span className="text-3xl font-black text-blue-700 dark:text-blue-300">{totalCasalPacks}</span>
-                <span className="mt-1 text-xs font-bold text-blue-900 uppercase tracking-wider text-center">Pct. Casal</span>
+                <span className="mt-1 text-xs font-bold text-blue-900 dark:text-blue-200 uppercase tracking-wider text-center">Pct. Casal</span>
                 <span className="mt-1 text-[10px] text-blue-600 dark:text-blue-400 text-center">{totalLencolCasal} un.</span>
               </div>
               <div className="flex flex-col items-center justify-center rounded-xl bg-emerald-50 dark:bg-emerald-900/30 p-4 border border-emerald-100 dark:border-emerald-900/50">
                 <span className="text-3xl font-black text-emerald-700 dark:text-emerald-300">{totalSolteiroPacks}</span>
-                <span className="mt-1 text-xs font-bold text-emerald-900 uppercase tracking-wider text-center">Pct. Solteiro</span>
+                <span className="mt-1 text-xs font-bold text-emerald-900 dark:text-emerald-200 uppercase tracking-wider text-center">Pct. Solteiro</span>
                 <span className="mt-1 text-[10px] text-emerald-600 dark:text-emerald-400 text-center">{totalLencolSolteiro} un.</span>
               </div>
               <div className="flex flex-col items-center justify-center rounded-xl bg-purple-50 dark:bg-purple-900/30 p-4 border border-purple-100 dark:border-purple-900/50">
                 <span className="text-3xl font-black text-purple-700 dark:text-purple-300">{totalFronhasPacks}</span>
-                <span className="mt-1 text-xs font-bold text-purple-900 uppercase tracking-wider text-center">Pct. Fronhas</span>
+                <span className="mt-1 text-xs font-bold text-purple-900 dark:text-purple-200 uppercase tracking-wider text-center">Pct. Fronhas</span>
                 <span className="mt-1 text-[10px] text-purple-600 dark:text-purple-400 text-center">{totalFronhas} un.</span>
               </div>
             </div>
@@ -135,10 +144,34 @@ export default function RoupariaTab({ user }: { user: any }) {
               <p className="text-gray-500 dark:text-gray-400 text-sm">Nenhum enxoval necessário no momento.</p>
             ) : (
               floorData.map(data => (
-                <div key={data.floor} className="rounded-xl border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800 p-4 shadow-sm">
+                <div key={data.floor} className="rounded-xl border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800 p-4 shadow-sm relative">
+                  <button 
+                    onClick={() => setShowInfoForFloor(showInfoForFloor === data.floor ? null : data.floor)}
+                    className="absolute top-4 right-4 flex h-6 w-6 items-center justify-center rounded-full bg-blue-100 dark:bg-blue-900/50 text-blue-600 dark:text-blue-400 hover:bg-blue-200 dark:hover:bg-blue-900/70 transition-colors shadow-sm"
+                  >
+                    <span className="text-sm font-bold">∑</span>
+                  </button>
+
                   <h4 className="mb-3 font-bold text-gray-700 dark:text-gray-200 border-b border-gray-100 dark:border-gray-700 pb-2">
                     Andar {data.floor}
                   </h4>
+
+                  {showInfoForFloor === data.floor && (
+                    <div className="mb-4 rounded-lg bg-blue-50/50 dark:bg-blue-900/10 p-3 text-xs text-gray-600 dark:text-blue-300 border border-blue-100/50 dark:border-blue-900/30 animate-in fade-in slide-in-from-top-2 duration-200">
+                      <p className="font-bold mb-1 text-blue-800 dark:text-blue-200">Detalhamento do Cálculo:</p>
+                      <ul className="space-y-1">
+                        <li>• Vagos (Sujo/Vestir): <span className="font-bold text-gray-900 dark:text-gray-100">{data.countVago}</span></li>
+                        <li>• Ocupados: <span className="font-bold text-gray-900 dark:text-gray-100">{data.countOcupado}</span> (Considerado 50% = <span className="font-bold text-blue-700 dark:text-blue-400">{data.countOcupadoCalc.toFixed(1)}</span>)</li>
+                        <li>• Base de Cálculo: <span className="font-bold text-gray-900 dark:text-gray-100">{(data.countVago + data.countOcupadoCalc).toFixed(1)}</span> quartos</li>
+                        <li className="pt-1 mt-1 border-t border-blue-200/50 dark:border-blue-800/50 text-blue-800 dark:text-blue-200">
+                          {data.floor === 200 
+                            ? "• Padrão: 4 casais, 4 fronhas" 
+                            : "• Padrão: 2 casais, 4 solteiros, 4 fronhas"}
+                        </li>
+                      </ul>
+                    </div>
+                  )}
+
                   <div className="grid grid-cols-3 gap-2 text-center">
                     <div className="rounded-lg bg-gray-50 dark:bg-gray-900 p-2">
                       <div className="text-lg font-bold text-blue-600 dark:text-blue-400">{data.casalPacks}</div>

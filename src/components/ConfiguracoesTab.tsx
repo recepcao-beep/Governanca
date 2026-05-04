@@ -49,7 +49,7 @@ export default function ConfiguracoesTab({ user }: { user: any }) {
     <div className="mx-auto max-w-2xl space-y-6">
       <div className="rounded-xl border border-orange-100 dark:border-orange-900/50 bg-orange-50 dark:bg-orange-900/30 p-6">
         <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 mb-4">
-          <h2 className="flex items-center gap-2 text-xl font-bold text-orange-900 dark:text-orange-100">
+          <h2 className="flex items-center gap-2 text-xl font-bold text-orange-900 dark:text-orange-200">
             <ListPlus /> Itens para Pedidos
           </h2>
           {!isEditingItems ? (
@@ -84,7 +84,7 @@ export default function ConfiguracoesTab({ user }: { user: any }) {
           )}
         </div>
         
-        <p className="mb-6 text-sm text-orange-800 dark:text-orange-200">
+        <p className="mb-6 text-sm text-orange-800 dark:text-orange-200/80">
           Cadastre os materiais que as camareiras podem solicitar na aba de Pedidos.
         </p>
 
@@ -96,7 +96,7 @@ export default function ConfiguracoesTab({ user }: { user: any }) {
               onChange={(e) => setNewItemName(e.target.value)}
               onKeyDown={(e) => e.key === 'Enter' && handleAddItem()}
               placeholder="Novo item (ex: Berço)"
-              className="flex-1 rounded-md border border-gray-300 dark:border-gray-600 p-2 text-sm focus:border-orange-500 focus:ring-orange-500"
+              className="flex-1 rounded-md border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-800 p-2 text-sm text-gray-900 dark:text-gray-100 focus:border-orange-500 focus:ring-orange-500"
             />
             <button 
               onClick={handleAddItem}
@@ -109,7 +109,7 @@ export default function ConfiguracoesTab({ user }: { user: any }) {
 
         <div className="flex flex-wrap gap-2">
           {(isEditingItems ? localItems : (requestableItems || [])).map(item => (
-            <div key={item} className="flex items-center gap-2 rounded-full border border-orange-200 bg-white dark:bg-gray-800 px-3 py-1.5 text-sm font-medium text-orange-800 dark:text-orange-200 shadow-sm">
+            <div key={item} className="flex items-center gap-2 rounded-full border border-orange-200 dark:border-orange-900/50 bg-white dark:bg-gray-800 px-3 py-1.5 text-sm font-medium text-orange-800 dark:text-orange-200 shadow-sm">
               <span>{item}</span>
               {isEditingItems && (
                 <button onClick={() => handleRemoveItem(item)} className="text-orange-400 hover:text-red-500">
@@ -119,14 +119,14 @@ export default function ConfiguracoesTab({ user }: { user: any }) {
             </div>
           ))}
           {(!requestableItems || requestableItems.length === 0) && !isEditingItems && (
-            <p className="text-sm text-orange-600 italic">Nenhum item cadastrado.</p>
+            <p className="text-sm text-orange-600 dark:text-orange-400 italic">Nenhum item cadastrado.</p>
           )}
         </div>
       </div>
 
-      <div className="rounded-xl border border-purple-100 bg-purple-50 dark:bg-purple-900/30 p-6">
+      <div className="rounded-xl border border-purple-100 dark:border-purple-900/50 bg-purple-50 dark:bg-purple-900/30 p-6">
         <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 mb-4">
-          <h2 className="flex items-center gap-2 text-xl font-bold text-purple-900">
+          <h2 className="flex items-center gap-2 text-xl font-bold text-purple-900 dark:text-purple-200">
             <Package /> Configuração de Enxoval
           </h2>
           {!isEditingPacks ? (
@@ -157,12 +157,12 @@ export default function ConfiguracoesTab({ user }: { user: any }) {
           )}
         </div>
         
-        <p className="mb-6 text-sm text-purple-800 dark:text-purple-200">
+        <p className="mb-6 text-sm text-purple-800 dark:text-purple-200/80">
           Defina a quantidade de unidades que vem em cada pacote fechado de enxoval. Isso afeta o cálculo na aba de Pedidos.
         </p>
 
         <div className="grid gap-4 sm:grid-cols-3">
-          <div className="rounded-lg bg-white dark:bg-gray-800 p-4 shadow-sm border border-purple-100">
+          <div className="rounded-lg bg-white dark:bg-gray-800 p-4 shadow-sm border border-purple-100 dark:border-purple-900/50">
             <label className="block text-xs font-bold text-gray-500 dark:text-gray-400 uppercase mb-1">Lençol de Casal</label>
             {isEditingPacks ? (
               <input 
@@ -172,13 +172,13 @@ export default function ConfiguracoesTab({ user }: { user: any }) {
                   const val = e.target.value;
                   setLocalPackSizes({...localPackSizes, lencolCasal: val === '' ? '' as any : Number(val)});
                 }}
-                className="w-full rounded-md border border-gray-300 dark:border-gray-600 p-2 text-lg font-bold text-gray-900 dark:text-gray-50 focus:border-purple-500 focus:ring-purple-500"
+                className="w-full rounded-md border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-800 p-2 text-lg font-bold text-gray-900 dark:text-gray-50 focus:border-purple-500 focus:ring-purple-500"
               />
             ) : (
               <div className="text-2xl font-black text-purple-700 dark:text-purple-300">{packSizes.lencolCasal} <span className="text-sm font-normal text-gray-500 dark:text-gray-400">un/pacote</span></div>
             )}
           </div>
-          <div className="rounded-lg bg-white dark:bg-gray-800 p-4 shadow-sm border border-purple-100">
+          <div className="rounded-lg bg-white dark:bg-gray-800 p-4 shadow-sm border border-purple-100 dark:border-purple-900/50">
             <label className="block text-xs font-bold text-gray-500 dark:text-gray-400 uppercase mb-1">Lençol de Solteiro</label>
             {isEditingPacks ? (
               <input 
@@ -188,13 +188,13 @@ export default function ConfiguracoesTab({ user }: { user: any }) {
                   const val = e.target.value;
                   setLocalPackSizes({...localPackSizes, lencolSolteiro: val === '' ? '' as any : Number(val)});
                 }}
-                className="w-full rounded-md border border-gray-300 dark:border-gray-600 p-2 text-lg font-bold text-gray-900 dark:text-gray-50 focus:border-purple-500 focus:ring-purple-500"
+                className="w-full rounded-md border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-800 p-2 text-lg font-bold text-gray-900 dark:text-gray-50 focus:border-purple-500 focus:ring-purple-500"
               />
             ) : (
               <div className="text-2xl font-black text-purple-700 dark:text-purple-300">{packSizes.lencolSolteiro} <span className="text-sm font-normal text-gray-500 dark:text-gray-400">un/pacote</span></div>
             )}
           </div>
-          <div className="rounded-lg bg-white dark:bg-gray-800 p-4 shadow-sm border border-purple-100">
+          <div className="rounded-lg bg-white dark:bg-gray-800 p-4 shadow-sm border border-purple-100 dark:border-purple-900/50">
             <label className="block text-xs font-bold text-gray-500 dark:text-gray-400 uppercase mb-1">Fronhas</label>
             {isEditingPacks ? (
               <input 
@@ -204,7 +204,7 @@ export default function ConfiguracoesTab({ user }: { user: any }) {
                   const val = e.target.value;
                   setLocalPackSizes({...localPackSizes, fronhas: val === '' ? '' as any : Number(val)});
                 }}
-                className="w-full rounded-md border border-gray-300 dark:border-gray-600 p-2 text-lg font-bold text-gray-900 dark:text-gray-50 focus:border-purple-500 focus:ring-purple-500"
+                className="w-full rounded-md border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-800 p-2 text-lg font-bold text-gray-900 dark:text-gray-50 focus:border-purple-500 focus:ring-purple-500"
               />
             ) : (
               <div className="text-2xl font-black text-purple-700 dark:text-purple-300">{packSizes.fronhas} <span className="text-sm font-normal text-gray-500 dark:text-gray-400">un/pacote</span></div>
@@ -214,10 +214,10 @@ export default function ConfiguracoesTab({ user }: { user: any }) {
       </div>
 
       <div className="rounded-xl border border-blue-100 dark:border-blue-900/50 bg-blue-50 dark:bg-blue-900/30 p-6">
-        <h2 className="mb-2 flex items-center gap-2 text-xl font-bold text-blue-900">
+        <h2 className="mb-2 flex items-center gap-2 text-xl font-bold text-blue-900 dark:text-blue-200">
           <FileSpreadsheet /> Integração Google Sheets
         </h2>
-        <p className="mb-6 text-sm text-blue-800 dark:text-blue-200">
+        <p className="mb-6 text-sm text-blue-800 dark:text-blue-300">
           As credenciais do robô e o ID da planilha já foram configurados no código do servidor. A sincronização ocorre automaticamente a cada 30 segundos.
         </p>
         

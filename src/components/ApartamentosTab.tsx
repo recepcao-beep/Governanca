@@ -60,7 +60,7 @@ export default function ApartamentosTab({ user }: { user: any }) {
           <div className="grid grid-cols-2 gap-4 sm:grid-cols-3">
             {allowedFloors.map(floor => {
               const floorRooms = rooms.filter(r => r.floor === floor);
-              const dirtyRooms = floorRooms.filter(r => r.condition === 'sujo').length;
+              const dirtyRooms = floorRooms.filter(r => r.condition === 'sujo' && (r.status === 'vago' || r.status === 'saida')).length;
               const arrivals = floorRooms.filter(r => r.status === 'chegada' || r.status === 'saida_chegada').length;
               const departures = floorRooms.filter(r => r.status === 'saida' || r.status === 'saida_chegada').length;
               const occupied = floorRooms.filter(r => r.status === 'ocupado').length;
@@ -69,7 +69,7 @@ export default function ApartamentosTab({ user }: { user: any }) {
                 <button
                   key={floor}
                   onClick={() => setSelectedFloor(floor)}
-                  className="flex flex-col items-center justify-center rounded-2xl border border-blue-100 dark:border-blue-900/50 bg-white dark:bg-gray-800 p-6 shadow-sm transition-all hover:bg-blue-50 dark:hover:bg-blue-900/30 hover:shadow-md active:scale-95"
+                  className="flex flex-col items-center justify-center rounded-2xl border border-blue-100/50 dark:border-blue-900/50 bg-slate-50 dark:bg-gray-800/80 p-6 shadow-sm transition-all hover:bg-blue-50 dark:hover:bg-blue-900/30 hover:shadow-md active:scale-95"
                 >
                   <div className="mb-3 flex h-12 w-12 items-center justify-center rounded-full bg-blue-100 dark:bg-blue-900/50 text-blue-600 dark:text-blue-400">
                     <Home size={24} />
@@ -174,7 +174,7 @@ export default function ApartamentosTab({ user }: { user: any }) {
                 if (filter === 'chegada') return r.status === 'chegada';
                 if (filter === 'saida_chegada') return r.status === 'saida_chegada';
                 if (filter === 'limpo') return r.condition === 'limpo';
-                if (filter === 'sujo') return r.condition === 'sujo';
+                if (filter === 'sujo') return r.condition === 'sujo' && (r.status === 'vago' || r.status === 'saida');
                 if (filter === 'vestir') return r.condition === 'vestir';
                 return true;
               })
@@ -236,21 +236,21 @@ function RoomCard({ room, onUpdate, onOpenArrumacao, onOpenLog }: { key?: React.
   const [showConditionMenu, setShowConditionMenu] = useState(false);
 
   const bgColors = {
-    vago: 'bg-white dark:bg-gray-800 border-gray-200 dark:border-gray-700 text-gray-800 dark:text-gray-100',
-    interditado: 'bg-yellow-50 dark:bg-yellow-900/30 border-yellow-200 text-yellow-900',
-    saida: 'bg-red-50 dark:bg-red-900/30 border-red-200 text-red-900',
-    chegada: 'bg-emerald-50 border-emerald-200 text-emerald-900',
-    ocupado: 'bg-blue-50 dark:bg-blue-900/30 border-blue-200 dark:border-blue-800/50 text-blue-900',
-    saida_chegada: 'bg-purple-50 border-purple-300 text-purple-900 border-2 shadow-md',
+    vago: 'bg-slate-50 dark:bg-gray-800 border-gray-200/60 dark:border-gray-700 text-gray-800 dark:text-gray-100 shadow-sm',
+    interditado: 'bg-yellow-50 dark:bg-yellow-900/20 border-yellow-200 dark:border-yellow-900/50 text-yellow-900 dark:text-yellow-400',
+    saida: 'bg-red-50 dark:bg-red-900/20 border-red-200 dark:border-red-900/50 text-red-900 dark:text-red-400',
+    chegada: 'bg-emerald-50 dark:bg-emerald-900/20 border-emerald-200 dark:border-emerald-900/50 text-emerald-900 dark:text-emerald-400',
+    ocupado: 'bg-blue-50 dark:bg-blue-900/20 border-blue-200 dark:border-blue-900/50 text-blue-900 dark:text-blue-400',
+    saida_chegada: 'bg-purple-50 dark:bg-purple-900/20 border-purple-300 dark:border-purple-900/50 text-purple-900 dark:text-purple-400 border-2 shadow-md',
   };
 
   const badgeColors = {
-    vago: 'bg-gray-100 dark:bg-gray-800 text-gray-600 dark:text-gray-300',
-    interditado: 'bg-yellow-200 text-yellow-800 dark:text-yellow-200',
-    saida: 'bg-red-200 text-red-800 dark:text-red-200',
-    chegada: 'bg-emerald-200 text-emerald-800',
-    ocupado: 'bg-blue-200 text-blue-800 dark:text-blue-200',
-    saida_chegada: 'bg-purple-200 text-purple-800',
+    vago: 'bg-gray-100 dark:bg-gray-700 text-gray-600 dark:text-gray-300',
+    interditado: 'bg-yellow-200 dark:bg-yellow-800/50 text-yellow-800 dark:text-yellow-200',
+    saida: 'bg-red-200 dark:bg-red-800/50 text-red-800 dark:text-red-200',
+    chegada: 'bg-emerald-200 dark:bg-emerald-800/50 text-emerald-800 dark:text-emerald-200',
+    ocupado: 'bg-blue-200 dark:bg-blue-800/50 text-blue-800 dark:text-blue-200',
+    saida_chegada: 'bg-purple-200 dark:bg-purple-800/50 text-purple-800 dark:text-purple-200',
   };
 
   const isSecondNightOrMore = () => {
@@ -336,9 +336,9 @@ function RoomCard({ room, onUpdate, onOpenArrumacao, onOpenLog }: { key?: React.
     }
   } else if (room.status === 'vago' || room.status === 'chegada' || room.status === 'saida_chegada' || room.status === 'saida') {
     const conditionColors = {
-      sujo: 'bg-red-800 text-white hover:bg-red-700 border-red-900',
-      limpo: 'bg-green-600 text-white hover:bg-green-50 dark:bg-green-900/300 border-green-700',
-      vestir: 'bg-blue-600 text-white hover:bg-blue-50 dark:bg-blue-900/300 border-blue-700'
+      sujo: 'bg-red-800 dark:bg-red-900 text-white hover:bg-red-700 dark:hover:bg-red-800 border-red-900',
+      limpo: 'bg-green-600 dark:bg-green-700 text-white hover:bg-green-500 dark:hover:bg-green-600 border-green-700',
+      vestir: 'bg-blue-600 dark:bg-blue-700 text-white hover:bg-blue-500 dark:hover:bg-blue-600 border-blue-700'
     };
     
     const conditionIcons = {
@@ -507,15 +507,15 @@ function ArrumacaoModal({ room, onClose, onSubmit }: { room: any; onClose: () =>
   };
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4 backdrop-blur-sm">
-      <div className="w-full max-w-sm rounded-2xl bg-white dark:bg-gray-800 p-4 sm:p-6 shadow-xl max-h-[90vh] overflow-y-auto mx-auto">
+    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 p-4 backdrop-blur-md">
+      <div className="w-full max-w-sm rounded-2xl bg-slate-50 dark:bg-gray-800 p-4 sm:p-6 shadow-2xl max-h-[90vh] overflow-y-auto mx-auto border border-white/20">
         <h3 className="mb-4 text-lg sm:text-xl font-bold text-gray-800 dark:text-gray-100">Arrumação - Quarto {room.id}</h3>
         
         <div className="mb-4 rounded-lg bg-gray-50 dark:bg-gray-900 p-3 sm:p-4">
           <label className="mb-2 block text-sm font-medium text-gray-700 dark:text-gray-200">Quais itens foram retirados do quarto?</label>
           <div className="flex gap-2">
             <select
-              className="flex-1 rounded-lg border border-gray-300 dark:border-gray-600 p-2 text-sm outline-none"
+              className="flex-1 rounded-lg border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-800 p-2 text-sm text-gray-900 dark:text-gray-100 outline-none focus:ring-2 focus:ring-blue-500/20"
               value={selectedItem}
               onChange={(e) => setSelectedItem(e.target.value)}
             >
@@ -524,7 +524,7 @@ function ArrumacaoModal({ room, onClose, onSubmit }: { room: any; onClose: () =>
             <input
               type="number"
               min="1"
-              className="w-20 rounded-lg border border-gray-300 dark:border-gray-600 p-2 text-center text-sm outline-none"
+              className="w-20 rounded-lg border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-800 p-2 text-center text-sm text-gray-900 dark:text-gray-100 outline-none focus:ring-2 focus:ring-blue-500/20"
               value={quantity}
               onChange={(e) => {
                 const val = e.target.value;
@@ -663,7 +663,7 @@ function SwapModal({ rooms, allowedFloors, user, swapRequests, onClose, onReques
                 placeholder="Pesquisar apartamento vago..."
                 value={searchQuery}
                 onChange={(e) => setSearchQuery(e.target.value)}
-                className="w-full pl-10 pr-4 py-2 rounded-xl border border-gray-300 dark:border-gray-600 focus:border-blue-500 focus:ring-2 focus:ring-blue-200 outline-none transition-all"
+                className="w-full pl-10 pr-4 py-2 rounded-xl border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-800 text-gray-900 dark:text-gray-100 focus:border-blue-500 focus:ring-2 focus:ring-blue-200 outline-none transition-all"
               />
             </div>
             
@@ -703,7 +703,7 @@ function SwapModal({ rooms, allowedFloors, user, swapRequests, onClose, onReques
                   value={reason}
                   onChange={(e) => setReason(e.target.value)}
                   placeholder="Ex: Quarto com mofo, ar condicionado quebrado..."
-                  className="w-full rounded-xl border border-gray-300 dark:border-gray-600 p-3 text-sm outline-none focus:border-blue-500 focus:ring-2 focus:ring-blue-200"
+                  className="w-full rounded-xl border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-800 p-3 text-sm text-gray-900 dark:text-gray-100 outline-none focus:border-blue-500 focus:ring-2 focus:ring-blue-200"
                   rows={3}
                 />
               </div>

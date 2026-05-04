@@ -51,8 +51,8 @@ export default function AuthScreen({ onLogin }: { onLogin: (user: any) => void }
   };
 
   return (
-    <div className="flex min-h-screen flex-col items-center justify-center bg-gray-50 dark:bg-gray-900 p-4">
-      <div className="w-full max-w-sm rounded-3xl bg-white dark:bg-gray-800 p-8 shadow-xl">
+    <div className="flex min-h-screen flex-col items-center justify-center bg-slate-100 dark:bg-gray-900 p-4">
+      <div className="w-full max-w-sm rounded-3xl bg-slate-50 dark:bg-gray-800 p-8 shadow-xl border border-white/50">
         <div className="mb-8 text-center">
           <div className="mx-auto mb-4 flex h-16 w-16 items-center justify-center rounded-2xl bg-blue-600 text-white shadow-lg">
             <Building size={32} />
@@ -99,7 +99,7 @@ export default function AuthScreen({ onLogin }: { onLogin: (user: any) => void }
               <input
                 type="password"
                 required
-                className="w-full rounded-xl border border-gray-300 dark:border-gray-600 p-4 outline-none focus:border-blue-500 focus:ring-2 focus:ring-blue-500/20"
+                className="w-full rounded-xl border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-800 p-4 text-gray-900 dark:text-gray-50 outline-none focus:border-blue-500 focus:ring-2 focus:ring-blue-500/20"
                 placeholder="****"
                 value={password}
                 onChange={(e) => setPassword(e.target.value)}

@@ -47,8 +47,8 @@ export default function Dashboard({ user, onLogout }: { user: any; onLogout: () 
 
   if (!currentUser.approved) {
     return (
-      <div className="flex h-screen flex-col items-center justify-center bg-gray-100 dark:bg-gray-900 p-4 text-center">
-        <div className="w-full max-w-sm rounded-3xl bg-white dark:bg-gray-800 p-8 shadow-xl">
+      <div className="flex h-screen flex-col items-center justify-center bg-slate-100 dark:bg-gray-900 p-4 text-center">
+        <div className="w-full max-w-sm rounded-3xl bg-slate-50 dark:bg-gray-800 p-8 shadow-xl border border-white/50">
           <h2 className="mb-4 text-2xl font-bold text-gray-900 dark:text-gray-50">Aguardando Aprovação</h2>
           <p className="mb-6 text-gray-600 dark:text-gray-400">Seu acesso precisa ser liberado por um gestor.</p>
           
@@ -89,9 +89,9 @@ export default function Dashboard({ user, onLogout }: { user: any; onLogout: () 
   }
 
   return (
-    <div className="flex h-screen flex-col bg-gray-50 dark:bg-gray-900 text-gray-900 dark:text-gray-100">
+    <div className="flex h-screen flex-col bg-slate-100/50 dark:bg-gray-900 text-gray-900 dark:text-gray-100">
       {/* Header */}
-      <header className="fixed top-0 z-10 flex w-full items-center justify-between bg-white dark:bg-gray-800 px-4 py-3 shadow-sm dark:border-b dark:border-gray-700">
+      <header className="fixed top-0 z-10 flex w-full items-center justify-between bg-slate-50 dark:bg-gray-800 px-4 py-3 shadow-sm dark:border-b dark:border-gray-700">
         <div className="flex items-center gap-3">
           <div className="flex h-10 w-10 items-center justify-center rounded-full bg-blue-100 dark:bg-blue-900/50 font-bold text-blue-600 dark:text-blue-400">
             {currentUser.email.charAt(0).toUpperCase()}
@@ -112,19 +112,21 @@ export default function Dashboard({ user, onLogout }: { user: any; onLogout: () 
       </header>
 
       {/* Main Content */}
-      <main className="flex-1 overflow-y-auto px-4 pt-20">
-        {activeTab === 'dashboard' && currentUser.role === 'gestor' && <DashboardTab />}
-        {activeTab === 'apartamentos' && <ApartamentosTab user={currentUser} />}
-        {activeTab === 'pedidos' && <PedidosTab user={currentUser} />}
-        {activeTab === 'manutencao' && <ManutencaoTab user={currentUser} />}
-        {activeTab === 'rouparia' && <RoupariaTab user={currentUser} />}
-        {activeTab === 'configuracoes' && currentUser.role === 'gestor' && <ConfiguracoesTab user={currentUser} />}
-        {activeTab === 'gestor' && currentUser.role === 'gestor' && <GestorTab />}
+      <main className="flex-1 overflow-y-auto px-4 pt-20 pb-safe">
+        <div className="mx-auto max-w-5xl">
+          {activeTab === 'dashboard' && currentUser.role === 'gestor' && <DashboardTab />}
+          {activeTab === 'apartamentos' && <ApartamentosTab user={currentUser} />}
+          {activeTab === 'pedidos' && <PedidosTab user={currentUser} />}
+          {activeTab === 'manutencao' && <ManutencaoTab user={currentUser} />}
+          {activeTab === 'rouparia' && <RoupariaTab user={currentUser} />}
+          {activeTab === 'configuracoes' && currentUser.role === 'gestor' && <ConfiguracoesTab user={currentUser} />}
+          {activeTab === 'gestor' && currentUser.role === 'gestor' && <GestorTab />}
+        </div>
         <div className="h-32 w-full"></div> {/* Spacer for bottom nav */}
       </main>
 
       {/* Bottom Navigation */}
-      <nav className="fixed bottom-0 z-10 flex w-full border-t border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800 pb-safe pt-1 overflow-x-auto no-scrollbar justify-start sm:justify-around px-2">
+      <nav className="fixed bottom-0 z-10 flex w-full border-t border-gray-200/50 dark:border-gray-700 bg-slate-50/95 dark:bg-gray-800/95 backdrop-blur-md pb-safe pt-1 overflow-x-auto no-scrollbar justify-start sm:justify-around px-2">
         {currentUser.role === 'gestor' && (
           <NavItem icon={<BarChart3 size={20} />} label="Dash" active={activeTab === 'dashboard'} onClick={() => setActiveTab('dashboard')} />
         )}
@@ -148,12 +150,22 @@ function NavItem({ icon, label, active, onClick }: { icon: React.ReactNode; labe
   return (
     <button
       onClick={onClick}
-      className={`flex shrink-0 min-w-[72px] sm:flex-1 flex-col items-center justify-center py-2 sm:py-3 transition-colors ${
+      className={`flex shrink-0 min-w-[72px] sm:flex-1 flex-col items-center justify-center py-2 sm:py-3 transition-all ${
         active ? 'text-blue-600 dark:text-blue-400' : 'text-gray-500 dark:text-gray-400 hover:text-gray-900 dark:hover:text-gray-100'
       }`}
     >
-      {icon}
-      <span className="mt-1 text-[9px] sm:text-[10px] font-medium uppercase tracking-wider truncate w-full text-center px-1">{label}</span>
+      <div className={`mb-1 flex h-10 w-10 items-center justify-center rounded-full transition-all duration-300 ${
+        active 
+          ? 'bg-blue-100 dark:bg-blue-900/50 scale-110 shadow-inner' 
+          : 'bg-blue-50/50 dark:bg-blue-900/10'
+      }`}>
+        {React.cloneElement(icon as React.ReactElement, { size: active ? 22 : 20 })}
+      </div>
+      <span className={`text-[9px] sm:text-[10px] font-bold uppercase tracking-wider truncate w-full text-center px-1 transition-all ${
+        active ? 'opacity-100 scale-105' : 'opacity-70'
+      }`}>
+        {label}
+      </span>
     </button>
   );
 }
